@@ -1,0 +1,12 @@
+# Build output
+build/
+.gradle/
+bin/
+out/
+*.class
+
+# IntelliJ's per-machine project state: SDK names, local paths, caches. The
+# shared run configuration lives in .run/ instead, which is checked in on
+# purpose so the dev client is one click away on a fresh clone.
+.idea/
+*.iml

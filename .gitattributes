@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary
+
+# The guide ships inside the jar. A Windows checkout was rewriting it to CRLF,
+# which cost 90 KB -- 5% of the plugin -- in carriage returns nobody reads.
+*.json text eol=lf
