@@ -38,6 +38,7 @@ public class ItemRef
 {
 	private String name;
 	private List<Integer> ids;
+	private int count;
 
 	public String getName()
 	{
@@ -52,5 +53,16 @@ public class ItemRef
 	public boolean isResolved()
 	{
 		return !getIds().isEmpty();
+	}
+
+	/**
+	 * How many the step asks for; 1 when the guide does not say.
+	 *
+	 * <p>Absent means one, not unknown -- "Buy 5 Jugs of wine" must not be
+	 * satisfied by a single jug.
+	 */
+	public int getCount()
+	{
+		return count < 1 ? 1 : count;
 	}
 }

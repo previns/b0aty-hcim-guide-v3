@@ -27,7 +27,6 @@ package com.b0atyguide.overlay;
 import com.b0atyguide.B0atyGuideConfig;
 import com.b0atyguide.data.Spell;
 import com.b0atyguide.data.Step;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -61,6 +60,7 @@ public class SpellOverlay extends Overlay
 
 	@Inject
 	private B0atyGuideConfig config;
+
 
 	@Inject
 	public SpellOverlay()

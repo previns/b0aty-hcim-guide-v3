@@ -34,8 +34,10 @@ import com.b0atyguide.data.Teleport;
 import com.b0atyguide.data.Target;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.font.FontRenderContext;
 import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
@@ -56,6 +58,12 @@ import net.runelite.client.ui.overlay.components.TitleComponent;
 public class CurrentStepOverlay extends OverlayPanel
 {
 	private static final int WIDTH = 220;
+	/** Only a few, so the overlay stays a hint rather than a report. */
+	private static final int MAX_UNIDENTIFIED_SHOWN = 3;
+
+	/** A quest can want a dozen things; the overlay is a hint, not a list. */
+	private static final int MAX_QUEST_ITEMS_SHOWN = 4;
+
 	/** A bank not yet visited is missing everything; the list has to stop somewhere. */
 	private static final int MAX_MISSING_SHOWN = 5;
 
@@ -66,6 +74,11 @@ public class CurrentStepOverlay extends OverlayPanel
 
 	/** Set once the guide is loaded; null before that and after shutdown. */
 	private Guide guide;
+	private final WrappedText stepLines = new WrappedText();
+	private final WrappedText questLines = new WrappedText();
+	private final WrappedText needsLines = new WrappedText();
+	private QuestHelperSteps.Instruction needsFor;
+	private String needsText = "";
 
 	@Inject
 	CurrentStepOverlay(SceneTracker tracker, B0atyGuideConfig config, Client client,
@@ -82,6 +95,11 @@ public class CurrentStepOverlay extends OverlayPanel
 	public void setGuide(Guide guide)
 	{
 		this.guide = guide;
+		needsFor = null;
+		needsText = "";
+		stepLines.clear();
+		questLines.clear();
+		needsLines.clear();
 	}
 
 	@Override
@@ -106,7 +124,7 @@ public class CurrentStepOverlay extends OverlayPanel
 
 		// LineComponent does not wrap, and step text routinely runs past the
 		// panel width, so the wrapping is done here against the real font.
-		for (String line : wrap(step.getText(), graphics.getFontMetrics(), WIDTH - 14))
+		for (String line : stepLines.get(step.getText(), graphics.getFontMetrics(), WIDTH - 14))
 		{
 			panelComponent.getChildren().add(
 				LineComponent.builder().left(line).build());
@@ -115,16 +133,19 @@ public class CurrentStepOverlay extends OverlayPanel
 		final Target target = step.getTarget();
 		if (target != null && target.getName() != null)
 		{
+			final boolean visible = onScreen();
 			panelComponent.getChildren().add(LineComponent.builder()
-				.left(onScreen() ? "On screen" : "Looking for")
+				.left(visible ? "On screen" : "Looking for")
 				.right(target.getName())
 				.leftColor(Color.GRAY)
-				.rightColor(onScreen() ? config.highlightColor() : Color.LIGHT_GRAY)
+				.rightColor(visible ? config.highlightColor() : Color.LIGHT_GRAY)
 				.build());
 		}
 
 		renderTeleport(step);
 		renderMissingItems(graphics);
+		renderQuestItems(graphics);
+		renderUnidentified(graphics);
 		renderQuestStep(graphics, step);
 		return super.render(graphics);
 	}
@@ -194,6 +215,68 @@ public class CurrentStepOverlay extends OverlayPanel
 	}
 
 	/**
+	 * What the quest on this step asks the player to bring.
+	 *
+	 * <p>Separate from the bank's own list: that says what this bank asks for,
+	 * while this is what the quest itself needs, and a player who read only the
+	 * withdraw line arrives without it.
+	 */
+	private void renderQuestItems(Graphics2D graphics)
+	{
+		final List<String> wanted = withdrawTracker.getQuestItems();
+		if (wanted.isEmpty())
+		{
+			return;
+		}
+
+		panelComponent.getChildren().add(LineComponent.builder()
+			.left("Quest needs")
+			.right(Integer.toString(wanted.size()))
+			.leftColor(Color.GRAY)
+			.rightColor(Color.GRAY)
+			.build());
+		for (int i = 0; i < Math.min(wanted.size(), MAX_QUEST_ITEMS_SHOWN); i++)
+		{
+			panelComponent.getChildren().add(LineComponent.builder()
+				.left(wanted.get(i))
+				.leftColor(Color.ORANGE)
+				.build());
+		}
+	}
+
+	/**
+	 * Names this bank asks for that the plugin could not identify.
+	 *
+	 * <p>Said out loud rather than left silent. Most are category words the
+	 * guide uses deliberately -- "Combat gear" is not an item and never will
+	 * be -- but from the player's side an unidentified name and a broken
+	 * plugin look identical: nothing lights up either way.
+	 */
+	private void renderUnidentified(Graphics2D graphics)
+	{
+		final List<String> unknown = withdrawTracker.getUnidentified();
+		if (unknown.isEmpty())
+		{
+			return;
+		}
+
+		final int shown = Math.min(unknown.size(), MAX_UNIDENTIFIED_SHOWN);
+		panelComponent.getChildren().add(LineComponent.builder()
+			.left("Not identified")
+			.right(Integer.toString(unknown.size()))
+			.leftColor(Color.GRAY)
+			.rightColor(Color.GRAY)
+			.build());
+		for (int i = 0; i < shown; i++)
+		{
+			panelComponent.getChildren().add(LineComponent.builder()
+				.left(unknown.get(i))
+				.leftColor(Color.GRAY)
+				.build());
+		}
+	}
+
+	/**
 	 * What Quest Helper would say for this quest at the player's current
 	 * progress.
 	 *
@@ -208,19 +291,16 @@ public class CurrentStepOverlay extends OverlayPanel
 			return;
 		}
 
-		final QuestHelperSteps helper = guide.questHelperFor(step);
-		if (helper == null || helper.getVar() == null)
+		// The tracker's, not a second lookup of its own. Resolving the quest
+		// value here as well meant this panel missed everything the plugin had
+		// already worked out -- which zone branch applies, and the diary tasks,
+		// which have no progress value to look up at all.
+		final QuestHelperSteps.Instruction instruction = tracker.getInstruction();
+		if (instruction == null || instruction.getText().isEmpty())
 		{
-			return;
-		}
-
-		final QuestHelperSteps.Var var = helper.getVar();
-		final int value = var.isVarbit()
-			? client.getVarbitValue(var.getId())
-			: client.getVarpValue(var.getId());
-		final QuestHelperSteps.Instruction instruction = helper.at(value);
-		if (instruction == null)
-		{
+			// Twenty-one of Quest Helper's slots are a place with no sentence
+			// attached. They still drive the highlight and the path; heading a
+			// panel section with nothing under it is not worth the room.
 			return;
 		}
 
@@ -235,16 +315,94 @@ public class CurrentStepOverlay extends OverlayPanel
 		// its conditions would pick, so it is dimmed rather than shown in the
 		// same weight as an instruction we can stand behind.
 		final Color colour = instruction.isConditional() ? Color.LIGHT_GRAY : Color.WHITE;
-		for (String line : wrap(instruction.getText(), graphics.getFontMetrics(), WIDTH - 14))
+		for (String line : questLines.get(instruction.getText(), graphics.getFontMetrics(), WIDTH - 14))
 		{
 			panelComponent.getChildren().add(
 				LineComponent.builder().left(line).leftColor(colour).build());
 		}
+
+		// What this step of the quest needs in hand, the way Quest Helper lists
+		// it. Per step, not per quest: the rest of the shopping list is not
+		// what the player needs at this moment, and showing it all is how the
+		// panel stops being read.
+		// Instructions are loaded guide data; selecting a different branch gives
+		// a different instruction. The same shopping sentence needs no rebuild
+		// each frame while that instruction remains current.
+		if (instruction != needsFor)
+		{
+			needsFor = instruction;
+			final String needs = needed(instruction);
+			needsText = needs.isEmpty() ? "" : "Needs: " + needs;
+		}
+		if (!needsText.isEmpty())
+		{
+			for (String line : needsLines.get(needsText, graphics.getFontMetrics(), WIDTH - 14))
+			{
+				panelComponent.getChildren().add(
+					LineComponent.builder().left(line).leftColor(Color.GRAY).build());
+			}
+		}
+	}
+
+	/** "2 x Bucket of milk, Doogle leaves", or empty when the step needs nothing. */
+	private static String needed(QuestHelperSteps.Instruction instruction)
+	{
+		final StringBuilder line = new StringBuilder();
+		for (QuestHelperSteps.Need need : instruction.getItems())
+		{
+			if (line.length() > 0)
+			{
+				line.append(", ");
+			}
+			if (need.getCount() > 1)
+			{
+				line.append(need.getCount()).append(" x ");
+			}
+			line.append(need.getName());
+		}
+		return line.toString();
 	}
 
 	private boolean onScreen()
 	{
 		return !tracker.getNpcs().isEmpty() || !tracker.getObjects().isEmpty();
+	}
+
+	/**
+	 * One bounded cache per paragraph, not a growing cache of guide history.
+	 * Wrapping measures every candidate line, which was repeated every frame
+	 * despite text normally staying unchanged for minutes. Font and render
+	 * context are part of the key: a UI scale or font change must still reflow.
+	 */
+	static final class WrappedText
+	{
+		private String text;
+		private Font font;
+		private FontRenderContext context;
+		private int width;
+		private List<String> lines;
+
+		void clear()
+		{
+			text = null;
+			font = null;
+			context = null;
+			lines = null;
+		}
+
+		List<String> get(String requested, FontMetrics metrics, int requestedWidth)
+		{
+			if (!requested.equals(text) || !metrics.getFont().equals(font)
+				|| !metrics.getFontRenderContext().equals(context) || width != requestedWidth)
+			{
+				text = requested;
+				font = metrics.getFont();
+				context = metrics.getFontRenderContext();
+				width = requestedWidth;
+				lines = wrap(requested, metrics, requestedWidth);
+			}
+			return lines;
+		}
 	}
 
 	/** Greedy word wrap. Words longer than the line get their own line rather than truncating. */

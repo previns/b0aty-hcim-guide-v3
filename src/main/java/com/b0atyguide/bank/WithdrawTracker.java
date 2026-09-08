@@ -27,10 +27,14 @@ package com.b0atyguide.bank;
 import com.b0atyguide.data.Guide;
 import com.b0atyguide.data.ItemRef;
 import com.b0atyguide.data.Section;
+import com.b0atyguide.data.QuestHelperSteps;
 import com.b0atyguide.data.Step;
+import com.b0atyguide.progress.HeldItems;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 import javax.inject.Inject;
@@ -74,6 +78,23 @@ public class WithdrawTracker
 	private final Set<Integer> teleportIds = new LinkedHashSet<>();
 	private String sectionId;
 
+	/**
+	 * The last reading of what the player is carrying.
+	 *
+	 * <p>Volatile: written on the client thread, read from the event thread.
+	 * Never null, so a caller before the first reading sees an empty inventory
+	 * rather than an exception.
+	 */
+	private volatile Map<Integer, Integer> carried = Collections.emptyMap();
+
+	/** Names the guide asks for that carry no ids. */
+	private final List<String> unidentified = new ArrayList<>();
+
+	/** Items the quest on this step asks for and the player is not carrying. */
+	private final List<String> questItems = new ArrayList<>();
+	private final Set<Integer> questIds = new LinkedHashSet<>();
+	private final SectionIndex sections = new SectionIndex();
+
 	/** Requirements from the current bank that are not carried. */
 	public List<ItemRef> getMissing()
 	{
@@ -88,7 +109,19 @@ public class WithdrawTracker
 
 	public boolean isMissing(int itemId)
 	{
-		return missingIds.contains(itemId);
+		return missingIds.contains(itemId) || questIds.contains(itemId);
+	}
+
+	/**
+	 * Every id a quest named in this bank still wants.
+	 *
+	 * <p>Kept apart from the bank's own list so the panel can go on saying
+	 * which came from where, while the ring in the bank treats them alike --
+	 * from the player's side they are both "things to take out before leaving".
+	 */
+	public Set<Integer> getQuestIds()
+	{
+		return Collections.unmodifiableSet(questIds);
 	}
 
 	/** Whether this item is the one the current step says to travel with. */
@@ -99,9 +132,22 @@ public class WithdrawTracker
 
 	public void clear()
 	{
+		clearRequirements();
+		sections.clear();
+		carried = Collections.emptyMap();
+	}
+
+	private void clearRequirements()
+	{
 		missing.clear();
 		missingIds.clear();
 		teleportIds.clear();
+		// These two are shown on the panel beside the bank list, and they were
+		// not cleared here -- so an early return in recompute left the previous
+		// bank's unidentified items and quest items on screen.
+		unidentified.clear();
+		questItems.clear();
+		questIds.clear();
 		sectionId = null;
 	}
 
@@ -124,7 +170,11 @@ public class WithdrawTracker
 
 	private void recompute(Guide guide, Step current)
 	{
-		clear();
+		clearRequirements();
+		// Before the early returns. The snapshot is read by callers that do not
+		// care whether there is a step to bank for, and a stale reading is a
+		// worse answer than an empty bank list.
+		carried = carriedCounts();
 		if (guide == null || current == null)
 		{
 			return;
@@ -135,25 +185,74 @@ public class WithdrawTracker
 			teleportIds.addAll(current.getTeleport().getIds());
 		}
 
-		final Section section = sectionOf(guide, current);
+		final Section section = sections.sectionOf(guide, current);
 		if (section == null)
 		{
 			return;
 		}
 		sectionId = section.getId();
 
-		final Set<Integer> carried = carriedIds();
 		for (Step step : section.getSteps())
 		{
+			// Only the trips to the bank. A section names plenty of items it
+			// never asks you to withdraw -- logs to light, a bucket to pick up
+			// on the way, cabbages to pull from a field -- and ringing those
+			// made the bank list wrong at every bank in the guide.
+			if (!step.isWithdraw())
+			{
+				continue;
+			}
+
+			// And only while it is still owed. `current` is the first step not
+			// yet ticked, so anything before it is done -- and a research
+			// package handed to Aubury ten steps ago must stop being called
+			// missing, or the bank keeps asking for something already spent.
+			if (step.getOrdinal() < current.getOrdinal())
+			{
+				continue;
+			}
+
+			// What the quest itself says to bring, on a step that names one. The
+			// guide's withdraw line is what this bank asks for; Quest Helper
+			// knows what the quest needs, and a player who reads only the
+			// withdraw line arrives at the quest without it.
+			final QuestHelperSteps quest = guide.questHelperFor(step);
+			if (quest != null)
+			{
+				for (QuestHelperSteps.Wanted wanted : quest.getItems())
+				{
+					if (carried.getOrDefault(wanted.getId(), 0) >= 1)
+					{
+						continue;
+					}
+					// Ringed in the bank, not only listed on the panel. A bank
+					// step that names a quest is telling the player to leave
+					// with what that quest needs, and reading a list of names
+					// off a panel while hunting a bank tab for them is the part
+					// the plugin is supposed to be doing.
+					questIds.add(wanted.getId());
+					if (!questItems.contains(wanted.getName()))
+					{
+						// Once each. Several withdraw steps in a bank can name
+						// the same quest, and the panel listed its items again
+						// for every one of them.
+						questItems.add(wanted.getName());
+					}
+				}
+			}
+
 			for (ItemRef item : step.getItems())
 			{
 				if (!item.isResolved())
 				{
-					// Unresolved names are not evidence of anything. Reporting
-					// them as missing would flag "Combat gear" forever.
+					// Not evidence of anything, so it is never called missing --
+					// that would flag "Combat gear" for ever. But it is worth
+					// saying out loud: an item the plugin cannot identify rings
+					// nothing, and silence looks exactly like a bug.
+					unidentified.add(item.getName());
 					continue;
 				}
-				if (Collections.disjoint(item.getIds(), carried))
+				if (HeldItems.heldCount(item, carried) < item.getCount())
 				{
 					missing.add(item);
 					missingIds.addAll(item.getIds());
@@ -162,23 +261,72 @@ public class WithdrawTracker
 		}
 	}
 
+	/**
+	 * Items the quest named on this step wants, that are not carried.
+	 *
+	 * <p>Shown beside the bank's own list. Quest Helper knows what a quest
+	 * needs; the guide's withdraw line only knows what this bank asks for.
+	 */
+	public List<String> getQuestItems()
+	{
+		return Collections.unmodifiableList(questItems);
+	}
+
+	/**
+	 * Names this bank asks for that the plugin could not identify.
+	 *
+	 * <p>Shown so a player knows why nothing lit up. Mostly category words the
+	 * guide uses on purpose -- "Combat gear", "Potions" -- but a genuine gap
+	 * looks identical from the outside, and a silent one is indistinguishable
+	 * from the plugin being broken.
+	 */
+	public List<String> getUnidentified()
+	{
+		return Collections.unmodifiableList(unidentified);
+	}
+
 	/** The bank whose list this reflects, for the panel heading. */
 	public String getSectionId()
 	{
 		return sectionId;
 	}
 
-	private Set<Integer> carriedIds()
+	/**
+	 * What was carried when the inventory was last read.
+	 *
+	 * <p>A snapshot, deliberately. Reading an item container asserts the client
+	 * thread, and this is asked from the panel and from {@code startUp()},
+	 * which are on the event thread -- calling through would throw there and
+	 * RuneLite would disable the plugin on the spot. That has now happened
+	 * twice, which is why every item-container read here is deferred.
+	 *
+	 * <p>Refreshed by {@link #update} on every inventory change and every step
+	 * change, both of which arrive on the client thread, so it is never more
+	 * than a tick behind what the player is holding.
+	 */
+	public Map<Integer, Integer> carried()
 	{
-		final Set<Integer> ids = new LinkedHashSet<>();
-		addAll(ids, client.getItemContainer(InventoryID.INV));
-		// Worn items count: the guide equips things as it goes, and a step
-		// asking for leather boots is satisfied by wearing them.
-		addAll(ids, client.getItemContainer(InventoryID.WORN));
-		return ids;
+		return carried;
 	}
 
-	private static void addAll(Set<Integer> ids, ItemContainer container)
+	/**
+	 * What is carried, and how many of each.
+	 *
+	 * <p>Counted rather than merely listed. A set answers "do you have an arrow
+	 * shaft", which is the wrong question for a step asking for 454 of them --
+	 * one shaft turned the ring off and the player walked away with one.
+	 */
+	private Map<Integer, Integer> carriedCounts()
+	{
+		final Map<Integer, Integer> counts = new HashMap<>();
+		addAll(counts, client.getItemContainer(InventoryID.INV));
+		// Worn items count: the guide equips things as it goes, and a step
+		// asking for leather boots is satisfied by wearing them.
+		addAll(counts, client.getItemContainer(InventoryID.WORN));
+		return counts;
+	}
+
+	private static void addAll(Map<Integer, Integer> counts, ItemContainer container)
 	{
 		if (container == null)
 		{
@@ -186,25 +334,53 @@ public class WithdrawTracker
 		}
 		for (Item item : container.getItems())
 		{
-			if (item != null && item.getId() > 0)
+			if (item != null && item.getId() >= 0)
 			{
-				ids.add(item.getId());
+				// Not "> 0". An empty slot is -1; zero is Dwarf remains, the
+				// first item in the game, and excluding it meant nobody could
+				// ever be holding one. Quest Helper's Dwarf Cannon branches on
+				// exactly that item, so the guide kept saying "get the dwarf
+				// remains at the top of the tower" to a player carrying them.
+				// Worn equipment reports a quantity of zero, so it counts as one.
+				counts.merge(item.getId(), Math.max(1, item.getQuantity()), Integer::sum);
 			}
 		}
 	}
 
-	private static Section sectionOf(Guide guide, Step target)
+	/**
+	 * Inventory changes should scan one bank's requirements, not locate that bank
+	 * by walking the whole guide again. Guide replacement invalidates the index;
+	 * ID matching preserves the old lookup even when a caller has a copied Step.
+	 */
+	static final class SectionIndex
 	{
-		for (Section section : guide.getSections())
+		private Guide indexedGuide;
+		private final Map<String, Section> byStepId = new HashMap<>();
+
+		Section sectionOf(Guide guide, Step target)
 		{
-			for (Step step : section.getSteps())
+			if (indexedGuide != guide)
 			{
-				if (step.getId().equals(target.getId()))
+				clear();
+				indexedGuide = guide;
+				if (guide != null)
 				{
-					return section;
+					for (Section section : guide.getSections())
+					{
+						for (Step step : section.getSteps())
+						{
+							byStepId.putIfAbsent(step.getId(), section);
+						}
+					}
 				}
 			}
+			return target == null ? null : byStepId.get(target.getId());
 		}
-		return null;
+
+		void clear()
+		{
+			indexedGuide = null;
+			byStepId.clear();
+		}
 	}
 }

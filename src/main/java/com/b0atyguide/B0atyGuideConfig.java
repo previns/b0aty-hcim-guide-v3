@@ -118,13 +118,28 @@ public interface B0atyGuideConfig extends Config
 		keyName = "highlightSpell",
 		name = "Ring the spell to cast",
 		description =
-			"On a step like \"Teleport to Varrock\", ring that spell in the spellbook. Only "
-				+ "steps that plainly cast one -- a teletab or a home teleport is a different "
-				+ "thing and stays unmarked.",
+			"On a step like \"Teleport to Varrock\" or \"Home teleport to Lumbridge\", ring "
+				+ "that spell in the spellbook. Only steps that plainly cast one -- a teletab "
+				+ "or a jewellery teleport is an item, not a spell, and stays unmarked.",
 		section = highlightSection,
 		position = 5
 	)
 	default boolean highlightSpell()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "highlightDialogue",
+		name = "Ring the dialogue option to pick",
+		description =
+			"On a step that writes the answers as a sequence -- \"Talk to Father Aereck "
+				+ "(3,1)\" -- colour the option that is due, in the highlight colour, so you "
+				+ "do not have to count rows in the chat box.",
+		section = highlightSection,
+		position = 12
+	)
+	default boolean highlightDialogue()
 	{
 		return true;
 	}
@@ -258,6 +273,52 @@ public interface B0atyGuideConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "remindAboutSetup",
+		name = "Remind me to check the setup image",
+		description =
+			"Once per bank, a chat line pointing at that bank's setup screenshot. The "
+				+ "withdraw list only says what to take out; the screenshot also shows what "
+				+ "you should already be wearing, which the guide's wording does not.",
+		section = bankSection,
+		position = 4
+	)
+	default boolean remindAboutSetup()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "highlightShopItems",
+		name = "Ring what to buy in a shop",
+		description =
+			"With a shop open, ring the item the current step tells you to buy. Matched by "
+				+ "item id, so a step whose items the plugin could not identify rings nothing "
+				+ "rather than guessing at a name.",
+		section = bankSection,
+		position = 3
+	)
+	default boolean highlightShopItems()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "highlightInterfaces",
+		name = "Ring what to click in a menu",
+		description =
+			"With a quest interface open, ring the part of it the step is about -- the right "
+				+ "tool on the cannon, the line of the multi-skill menu, the slot in a shop. "
+				+ "Taken from Quest Helper's own marks, so a step it does not mark rings "
+				+ "nothing rather than guessing.",
+		section = bankSection,
+		position = 4
+	)
+	default boolean highlightInterfaces()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 		keyName = "registerBankTags",
 		name = "Bank tags for each bank",
 		description =
@@ -327,6 +388,35 @@ public interface B0atyGuideConfig extends Config
 	default int fontSize()
 	{
 		return 14;
+	}
+
+	@ConfigItem(
+		keyName = "autoTickArrival",
+		name = "Auto-tick when you arrive",
+		description =
+			"Tick the step you are on once you reach where it sent you. Only steps that are "
+				+ "nothing but travel -- \"head there and talk to someone\" still needs the talk.",
+		section = panelSection,
+		position = 9
+	)
+	default boolean autoTickArrival()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "autoTickAcquired",
+		name = "Auto-tick when you have the items",
+		description =
+			"Tick the step you are on once you are carrying everything it told you to get. "
+				+ "Only steps that plainly say to acquire something and whose items are all "
+				+ "known, and only the step you are on -- never one further down the guide.",
+		section = panelSection,
+		position = 8
+	)
+	default boolean autoTickAcquired()
+	{
+		return true;
 	}
 
 	@ConfigItem(

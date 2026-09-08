@@ -152,6 +152,50 @@ public class GuideLoader
 					// two unrelated steps together.
 					throw new GuideLoadException("duplicate step id " + step.getId());
 				}
+				validateMilestone(guide, step);
+			}
+		}
+	}
+
+	private static void validateMilestone(Guide guide, Step step) throws GuideLoadException
+	{
+		final boolean items = !step.getQuestStopItems().isEmpty();
+		final boolean value = step.getQuestStopValue() != null;
+		final boolean condition = step.getQuestStopCondition() != null;
+		if (!items && !value && !condition && !step.isQuestStopUnresolved() && !step.isQuestStartOnly()
+			&& !step.isQuestFollow())
+		{
+			return;
+		}
+		if (!step.isQuestStep() || guide.questHelperFor(step) == null
+			|| (step.isQuestStartOnly() && (step.getQuestDoneAt() == null
+				|| step.getQuestDoneAt() <= 0 || step.getQuestDoneAtPanel() != null))
+			|| ((items || value || condition || step.isQuestStopUnresolved()) && (step.isQuestStartOnly()
+				|| step.getQuestDoneAt() != null || step.getQuestDoneAtPanel() != null
+				|| step.isQuestCompletes()))
+			|| (items && step.isQuestStopUnresolved())
+			|| (value && (step.getQuestStopValue() <= 0
+				|| step.getQuestStopValue() > guide.questHelperFor(step).getLastValue()
+				|| items || step.isQuestStopUnresolved()))
+			|| (condition && (value || items || step.isQuestStopUnresolved()
+				|| !step.getQuestStopCondition().isMilestoneCondition())))
+		{
+			throw new GuideLoadException("conflicting quest milestone on " + step.getId());
+		}
+		final Set<Integer> used = new HashSet<>();
+		for (QuestHelperSteps.Need need : step.getQuestStopItems())
+		{
+			if (need == null || need.getIds().isEmpty())
+			{
+				throw new GuideLoadException("unresolved quest item on " + step.getId());
+			}
+			for (Integer id : need.getIds())
+			{
+				// A repeated ID would count one carried item twice towards a goal.
+				if (id == null || id < 0 || !used.add(id))
+				{
+					throw new GuideLoadException("invalid quest item IDs on " + step.getId());
+				}
 			}
 		}
 	}

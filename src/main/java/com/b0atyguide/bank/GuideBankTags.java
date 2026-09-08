@@ -24,8 +24,8 @@
  */
 package com.b0atyguide.bank;
 
-import com.b0atyguide.data.Guide;
 import com.b0atyguide.data.ItemRef;
+import com.b0atyguide.data.Guide;
 import com.b0atyguide.data.Section;
 import com.b0atyguide.data.Step;
 import java.util.ArrayList;

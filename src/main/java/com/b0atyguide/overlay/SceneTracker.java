@@ -24,20 +24,26 @@
  */
 package com.b0atyguide.overlay;
 
+import com.b0atyguide.data.QuestHelperSteps;
 import com.b0atyguide.data.Step;
 import com.b0atyguide.data.Target;
+import com.b0atyguide.path.RealPoint;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.function.Function;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
+import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
+import net.runelite.api.NPCComposition;
 import net.runelite.api.ObjectComposition;
 import net.runelite.api.TileObject;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
@@ -60,8 +66,37 @@ import net.runelite.client.callback.ClientThread;
 @Singleton
 public class SceneTracker
 {
+	/**
+	 * How near a match has to be for the coordinate to be believed.
+	 *
+	 * <p>Generous, because it only decides whether to narrow at all. Quest
+	 * Helper's coordinates are exact and the wiki's are within a building.
+	 */
+	private static final int NEAR = 25;
+
+	/**
+	 * How far from its coordinate a step's other matches still count.
+	 *
+	 * <p>Quest Helper's {@code maxRoamRange}, which is what it allows an npc to
+	 * have wandered.
+	 */
+	private static final int ROAM = 48;
+
+	/**
+	 * How far {@code showAllInArea} reaches for scenery.
+	 *
+	 * <p>Quest Helper's {@code ObjectStep.maxObjectDistance}. Wider than the npc
+	 * range because it is measured from one coordinate over a room full of the
+	 * same thing -- every crate in the Lumberyard -- rather than from a person
+	 * who has walked off.
+	 */
+	private static final int FAR = 50;
+
 	@Inject
 	private Client client;
+
+	@Inject
+	private GroundItemTracker groundItems;
 
 	@Inject
 	private ClientThread clientThread;
@@ -73,8 +108,38 @@ public class SceneTracker
 	private String sectionLabel;
 	private List<String> wantedNames = Collections.emptyList();
 	private Set<Integer> wantedIds = Collections.emptySet();
+	/** What Quest Helper is waiting on, or null off-quest. */
+	private QuestHelperSteps.Instruction instruction;
+
 	private boolean wantNpc;
 	private boolean wantObject;
+
+	/**
+	 * Where the step says the thing is, when it says.
+	 *
+	 * <p>Several coordinates for a name the wiki maps in more than one place;
+	 * exactly one when Quest Helper named it.
+	 */
+	private List<WorldPoint> wantedAt = Collections.emptyList();
+
+	/** Whether every match near the coordinate counts, not only the nearest. */
+	private boolean spread;
+
+	/**
+	 * Which source won, for the diagnostic overlay to show.
+	 *
+	 * <p>Three can supply what to look for and the choice between them is the
+	 * thing that goes wrong, so it is worth being able to read it back.
+	 */
+	private String source = "nothing";
+
+	/**
+	 * Whether {@link #wantedAt} is exact rather than approximate.
+	 *
+	 * <p>Quest Helper names the tile; the wiki drops a marker somewhere on the
+	 * subject of a page. Only the first can be held to.
+	 */
+	private boolean exactly;
 
 	/**
 	 * Point the tracker at a step. Cheap enough to call on every panel
@@ -82,11 +147,71 @@ public class SceneTracker
 	 */
 	public void setStep(Step step, String sectionLabel)
 	{
+		setStep(step, sectionLabel, null);
+	}
+
+	/**
+	 * Point the tracker at a step, and at what Quest Helper says to do right
+	 * now.
+	 *
+	 * <p>The guide advances a quest a few steps at a time, so on a quest step
+	 * its own words ("continue Rune Mysteries") name nothing to outline while
+	 * Quest Helper knows exactly which NPC or object is next. That instruction
+	 * is matched alongside the step's own target rather than instead of it:
+	 * the guide's target is what the player asked for, and the instruction is
+	 * what the game is waiting on.
+	 *
+	 * @param instruction the current Quest Helper instruction, or null
+	 */
+	public void setStep(Step step, String sectionLabel,
+		QuestHelperSteps.Instruction instruction)
+	{
+		// All of it on the client thread, because that is where all of it is
+		// read. Ticking a step off comes from the panel, on the event thread,
+		// and every field below is then read by the overlays as they render --
+		// none of them volatile, so the render thread was free to go on seeing
+		// the step before the one the player had just completed. It did: the
+		// sidebar moved on to the next step while the overlay stayed on the
+		// last, pointing at nothing, until something else happened to publish
+		// the write.
+		//
+		// Deferring is right from either side: a caller already on the client
+		// thread runs on the next tick instead of inline, which is invisible.
+		onClientThread(() -> apply(step, sectionLabel, instruction));
+	}
+
+	/**
+	 * Run on the client thread, or here and now if there is not one.
+	 *
+	 * <p>The second case is a unit test. Everything below this line is pure --
+	 * it decides what to look for from the step and the instruction -- so a test
+	 * can drive it without a client, and that is worth more than insisting on a
+	 * thread that does not exist.
+	 */
+	private void onClientThread(Runnable work)
+	{
+		if (clientThread == null)
+		{
+			work.run();
+			return;
+		}
+		clientThread.invokeLater(work);
+	}
+
+	private void apply(Step step, String sectionLabel,
+		QuestHelperSteps.Instruction instruction)
+	{
 		this.step = step;
 		this.sectionLabel = sectionLabel;
+		this.instruction = instruction;
 
 		final Target target = step == null ? null : step.getTarget();
-		if (target == null || !target.isHighlightable())
+		final boolean usable = target != null && target.isHighlightable();
+		final boolean hasInstruction = instruction != null && !instruction.getIds().isEmpty();
+		final List<Step.Seller> sellers = step == null
+			? Collections.emptyList() : step.getSellers();
+
+		if (!usable && !hasInstruction && sellers.isEmpty())
 		{
 			// Keep the step. Most steps have nothing to outline, and the current
 			// step still has to be readable on the step overlay -- forgetting it
@@ -96,21 +221,97 @@ public class SceneTracker
 			return;
 		}
 
-		wantedNames = target.getNames();
-		wantedIds = new HashSet<>(target.getIds());
-		wantNpc = Target.KIND_NPC.equals(target.getKind());
-		wantObject = Target.KIND_OBJECT.equals(target.getKind());
+		// Which of the two is speaking about a thing, and which about a region.
+		//
+		// The guide wins when it names something with ids of its own: that is
+		// the step. "Trade Heckel Funch or Hudo and buy Dwellberries" is one
+		// errand inside Plague City, and answering it with the quest's current
+		// instruction -- Edmond, at the other end of Ardougne, from the start of
+		// a quest the player is already halfway through -- is not an
+		// improvement, it is a different step.
+		//
+		// Quest Helper wins when the guide names a place or nothing. "Return to
+		// Ardougne & complete Plague City" resolves to Ardougne the town; Quest
+		// Helper knows which door. 326 of the 686 quest steps are that shape.
+		// A bounded quest instruction names an outcome, not one permanent NPC.
+		// Its live quest step must move on to the raft/rope/bookcase as required.
+		final boolean milestone = step != null && step.isQuestStep() && step.isQuestFollow();
+		final boolean specific = usable && !target.getIds().isEmpty() && !milestone;
+		if (hasInstruction && !specific)
+		{
+			source = "quest helper";
+			wantedNames = Collections.emptyList();
+			wantedIds = new HashSet<>(instruction.getIds());
+			wantNpc = instruction.isNpc();
+			wantObject = instruction.isObject();
+			spread = instruction.isSpread();
+
+			final WorldPoint here = pointOf(instruction.getPoint());
+			wantedAt = here == null
+				? Collections.emptyList() : Collections.singletonList(here);
+			// Its coordinate is the tile, so nothing near it means none of these
+			// is the one. A wiki coordinate is a marker dropped somewhere on the
+			// subject of a page and cannot be held to that.
+			exactly = here != null;
+		}
+		else
+		{
+			source = usable ? "the guide's own target" : "nothing";
+			wantedNames = usable ? target.getNames() : Collections.emptyList();
+			wantedIds = new HashSet<>(usable ? target.getIds() : Collections.emptyList());
+			wantNpc = usable && Target.KIND_NPC.equals(target.getKind());
+			wantObject = usable && Target.KIND_OBJECT.equals(target.getKind());
+			wantedAt = usable ? points(target.getPoints()) : Collections.emptyList();
+			// A name the wiki maps in several places is several places, not one.
+			spread = usable && target.getPoints().size() > 1;
+			exactly = false;
+		}
+
+		// Whoever sells what the step says to buy. Every shop that stocks it,
+		// because which one is right depends on where the player is standing --
+		// and that is settled below, by keeping the matches nearest to them.
+		if (!sellers.isEmpty() && !usable && !hasInstruction)
+		{
+			source = "shopkeepers who sell it";
+			for (Step.Seller seller : sellers)
+			{
+				wantedIds.addAll(seller.getIds());
+			}
+			wantNpc = true;
+			// Not narrowed to a coordinate: the shops are all over the world and
+			// the one that matters is the one in the room.
+			wantedAt = Collections.emptyList();
+			spread = false;
+		}
 
 		npcs.clear();
 		objects.clear();
-		clientThread.invokeLater(this::rescan);
+		if (client != null)
+		{
+			rescan();
+		}
+	}
+
+	/**
+	 * The Quest Helper instruction in force, or null.
+	 *
+	 * <p>Carries a coordinate even where its constant could not be resolved to
+	 * ids, so a step with nothing to outline can still be routed to.
+	 */
+	public QuestHelperSteps.Instruction getInstruction()
+	{
+		return instruction;
 	}
 
 	public void clear()
 	{
-		step = null;
-		sectionLabel = null;
-		clearMatches();
+		onClientThread(() ->
+		{
+			step = null;
+			sectionLabel = null;
+			instruction = null;
+			clearMatches();
+		});
 	}
 
 	/** Forget what we were looking for, but not which step we are on. */
@@ -118,15 +319,28 @@ public class SceneTracker
 	{
 		wantedNames = Collections.emptyList();
 		wantedIds = Collections.emptySet();
+		wantedAt = Collections.emptyList();
+		spread = false;
+		exactly = false;
+		source = "nothing";
 		wantNpc = false;
 		wantObject = false;
 		npcs.clear();
 		objects.clear();
 	}
 
+	/**
+	 * Whether there is anything in the scene worth looking for.
+	 *
+	 * <p>This asked only whether the step <em>named</em> something, and it gates
+	 * both the model outline and the minimap arrow. On a quest step the guide
+	 * names the quest -- "continue Gertrude's Cat" -- and everything to look for
+	 * comes from Quest Helper's instruction as ids, with no name at all, so both
+	 * were switched off on exactly the steps that had the best data.
+	 */
 	public boolean isTracking()
 	{
-		return !wantedNames.isEmpty();
+		return !wantedNames.isEmpty() || !wantedIds.isEmpty();
 	}
 
 	public Step getStep()
@@ -148,6 +362,32 @@ public class SceneTracker
 	public List<TileObject> getObjects()
 	{
 		return objects;
+	}
+
+	// --- what it decided, for the diagnostic ---------------------------------
+
+	/** Which source the current search came from, in plain words. */
+	public String getSource()
+	{
+		return source;
+	}
+
+	/** The ids being looked for right now. */
+	public Set<Integer> getWantedIds()
+	{
+		return Collections.unmodifiableSet(wantedIds);
+	}
+
+	/** The names being matched at runtime, where no id was resolved. */
+	public List<String> getWantedNames()
+	{
+		return wantedNames;
+	}
+
+	/** Where the step says the thing is, if it says. */
+	public List<WorldPoint> getWantedAt()
+	{
+		return Collections.unmodifiableList(wantedAt);
 	}
 
 	// --- matching ----------------------------------------------------------
@@ -186,7 +426,20 @@ public class SceneTracker
 		{
 			return true;
 		}
-		return nameMatches(npc.getName());
+		// The id an npc reports is the one it currently wears. A great many of
+		// them transform -- by quest progress, by time of day, by having been
+		// spoken to -- and the id the build resolved is only one of those, so
+		// asking the composition is the difference between finding the npc and
+		// finding nothing. Quest Helper carries an npcName alongside the id for
+		// the same reason, which is the second half of this.
+		final NPCComposition composition = npc.getTransformedComposition();
+		if (composition != null && !wantedIds.isEmpty()
+			&& wantedIds.contains(composition.getId()))
+		{
+			return true;
+		}
+		return nameMatches(npc.getName())
+			|| (composition != null && nameMatches(composition.getName()));
 	}
 
 	private boolean objectMatches(TileObject object)
@@ -208,12 +461,112 @@ public class SceneTracker
 
 	// --- scene scanning ----------------------------------------------------
 
+	/**
+	 * Whether one of these is in the loaded scene, inside the box if given.
+	 *
+	 * <p>Answered for a quest's branch conditions -- "is the npc standing there
+	 * yet", "has the object appeared", "is the item on the floor" -- which is
+	 * how those branches notice the player has done something. The same walk
+	 * this class already does for the current step, asked on someone else's
+	 * behalf.
+	 *
+	 * <p>On the client thread, like everything else here: the caller reaches it
+	 * from the game tick and from the panel, and the panel's answer is a tick
+	 * stale rather than an assertion failure.
+	 */
+	public boolean isPresent(String kind, List<Integer> ids, List<List<Integer>> zone)
+	{
+		return conditionCheck().isPresent(kind, ids, zone);
+	}
+
+	/** A lazy, evaluation-local index; never retain transformed IDs across ticks. */
+	public PresenceCheck conditionCheck()
+	{
+		return new PresenceCheck();
+	}
+
+	public final class PresenceCheck
+	{
+		private SceneObjects.PresenceIndex objectIndex;
+
+		public boolean isPresent(String kind, List<Integer> ids, List<List<Integer>> zone)
+		{
+			if (client == null || ids.isEmpty()
+				|| client.getGameState() != GameState.LOGGED_IN)
+			{
+				return false;
+			}
+			if ("npc".equals(kind))
+			{
+				for (NPC npc : client.getTopLevelWorldView().npcs())
+				{
+					if (npc != null && (ids.contains(npc.getId())
+						|| composed(npc, ids)) && inside(zone, RealPoint.of(client, npc)))
+					{
+						return true;
+					}
+				}
+				return false;
+			}
+			if ("object".equals(kind))
+			{
+				if (objectIndex == null)
+				{
+					objectIndex = new SceneObjects.PresenceIndex();
+					SceneObjects.forEach(client, object ->
+					{
+						final WorldPoint point = RealPoint.of(client, object.getWorldLocation());
+						objectIndex.add(object.getId(), point);
+						final ObjectComposition definition = SceneObjects.definitionOf(client, object);
+						if (definition != null && definition.getId() != object.getId())
+						{
+							objectIndex.add(definition.getId(), point);
+						}
+					});
+				}
+				return objectIndex.anyOf(ids, zone);
+			}
+			// A ground item. Asked of the tracker that already walks the tiles.
+			return groundItems != null && groundItems.anyOf(ids, zone);
+		}
+	}
+
+	private boolean composed(NPC npc, List<Integer> ids)
+	{
+		final NPCComposition composition = npc.getTransformedComposition();
+		return composition != null && ids.contains(composition.getId());
+	}
+
+	/** Whether a point is in one of the boxes, or there are none to be in. */
+	private static boolean inside(List<List<Integer>> zone, WorldPoint at)
+	{
+		if (zone == null || zone.isEmpty())
+		{
+			return true;
+		}
+		if (at == null)
+		{
+			return false;
+		}
+		for (List<Integer> box : zone)
+		{
+			if (box != null && box.size() >= 6
+				&& box.get(0) <= at.getX() && at.getX() <= box.get(3)
+				&& box.get(1) <= at.getY() && at.getY() <= box.get(4)
+				&& box.get(2) <= at.getPlane() && at.getPlane() <= box.get(5))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private void rescan()
 	{
 		npcs.clear();
 		objects.clear();
 
-		if (wantedNames.isEmpty() || client.getGameState() != GameState.LOGGED_IN)
+		if (!isTracking() || client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
 		}
@@ -233,10 +586,226 @@ public class SceneTracker
 		{
 			SceneObjects.forEach(client, this::consider);
 		}
+
+		final int before = npcs.size() + objects.size();
+		if (exactly)
+		{
+			// Quest Helper's coordinate, so Quest Helper's rules.
+			keepOnTheTile(objects);
+			keepWithinRoamRange(npcs);
+		}
+		else
+		{
+			keepNearest(npcs, NPC::getWorldLocation);
+			keepNearest(objects, TileObject::getWorldLocation);
+		}
+
+	}
+
+	/**
+	 * Quest Helper's rule for scenery: the tile, not the neighbourhood.
+	 *
+	 * <p>{@code ObjectStep.addObjectToList} keeps an object when its own tile is
+	 * the one the step names, or when the object stands over that tile -- a
+	 * multi-tile object reports its centre, so a 3x3 door named by a corner has
+	 * to be caught by its footprint. Only a step marked
+	 * {@code showAllInArea} widens, and then to all of them within
+	 * {@code maxObjectDistance}.
+	 *
+	 * <p>What this replaced kept whichever object of that id was nearest within
+	 * twenty-five tiles. When the named one is in the scene the two agree -- it
+	 * is nearest, at zero. They part when it is not: this keeps nothing, and
+	 * nearest-within-25 highlighted a different barrel a few tiles away and sent
+	 * the player to search it. There are five of that barrel's id around the
+	 * mine cart.
+	 */
+	private void keepOnTheTile(List<TileObject> matches)
+	{
+		if (wantedAt.isEmpty())
+		{
+			return;
+		}
+		for (int i = matches.size() - 1; i >= 0; i--)
+		{
+			final TileObject object = matches.get(i);
+			if (!standsOn(object) && !(spread && distance(realPointOf(object)) < FAR))
+			{
+				matches.remove(i);
+			}
+		}
+	}
+
+	/** Whether an object's own tile, or the tiles it covers, is the named one. */
+	private boolean standsOn(TileObject object)
+	{
+		final WorldPoint at = realPointOf(object);
+		if (at == null)
+		{
+			return false;
+		}
+		for (WorldPoint wanted : wantedAt)
+		{
+			if (wanted.equals(at))
+			{
+				return true;
+			}
+			if (!(object instanceof GameObject) || wanted.getPlane() != at.getPlane())
+			{
+				continue;
+			}
+			// A GameObject reports its centre tile, so walk back out to the
+			// south-west corner before measuring the footprint. Quest Helper
+			// does the same arithmetic, for the same reason.
+			final GameObject game = (GameObject) object;
+			final int west = at.getX() - (game.sizeX() - 1) / 2;
+			final int south = at.getY() - (game.sizeY() - 1) / 2;
+			if (wanted.getX() >= west && wanted.getX() < west + game.sizeX()
+				&& wanted.getY() >= south && wanted.getY() < south + game.sizeY())
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Quest Helper's rule for people: anywhere within roaming distance.
+	 *
+	 * <p>{@code NpcStep.addNpcToListGivenMatchingID} takes the npc when it is
+	 * within {@code maxRoamRange} of the step's coordinate, and takes only one
+	 * of them unless the step allows several. An npc is not where it was left --
+	 * that is the whole reason the range exists -- and narrowing them the way
+	 * scenery is narrowed dropped guards who had walked to the far end of their
+	 * patrol.
+	 *
+	 * <p>One difference, deliberate: Quest Helper keeps whichever npc spawned
+	 * first and this keeps the nearest. A rescan has no spawn order to keep.
+	 */
+	private void keepWithinRoamRange(List<NPC> matches)
+	{
+		if (wantedAt.isEmpty())
+		{
+			return;
+		}
+		int best = Integer.MAX_VALUE;
+		final List<Integer> distances = new ArrayList<>(matches.size());
+		for (NPC npc : matches)
+		{
+			final int away = distance(realPointOf(npc));
+			distances.add(away);
+			best = Math.min(best, away);
+		}
+		final int keep = spread ? ROAM - 1 : best;
+		for (int i = matches.size() - 1; i >= 0; i--)
+		{
+			if (distances.get(i) > keep || distances.get(i) >= ROAM)
+			{
+				matches.remove(i);
+			}
+		}
+	}
+
+	/**
+	 * Narrow a list of matches by where the step says the thing is.
+	 *
+	 * <p>For the guide's own coordinates, which are wiki map markers rather than
+	 * tiles: a marker is dropped somewhere on the subject of a page and cannot
+	 * be held to the square it landed on, so this keeps the nearest match and
+	 * leaves a lone distant one alone rather than trading one highlight for
+	 * none.
+	 */
+	private <T> void keepNearest(List<T> matches, Function<T, WorldPoint> whereItIs)
+	{
+		if (wantedAt.isEmpty() || matches.size() < 2)
+		{
+			return;
+		}
+
+		int best = Integer.MAX_VALUE;
+		final List<Integer> distances = new ArrayList<>(matches.size());
+		for (T match : matches)
+		{
+			final int away = distance(whereItIs.apply(match));
+			distances.add(away);
+			best = Math.min(best, away);
+		}
+		if (best > NEAR)
+		{
+			return;
+		}
+
+		final int keep = spread ? ROAM : best;
+		for (int i = matches.size() - 1; i >= 0; i--)
+		{
+			if (distances.get(i) > keep)
+			{
+				matches.remove(i);
+			}
+		}
+	}
+
+	private WorldPoint realPointOf(NPC npc)
+	{
+		return RealPoint.of(client, npc);
+	}
+
+	private WorldPoint realPointOf(TileObject object)
+	{
+		return RealPoint.of(client, object.getWorldLocation());
+	}
+
+	/** Tiles from a point to the nearest place the step points at, or huge. */
+	private int distance(WorldPoint at)
+	{
+		if (at == null)
+		{
+			return Integer.MAX_VALUE;
+		}
+		int best = Integer.MAX_VALUE;
+		for (WorldPoint wanted : wantedAt)
+		{
+			if (wanted.getPlane() != at.getPlane())
+			{
+				continue;
+			}
+			best = Math.min(best, wanted.distanceTo2D(at));
+		}
+		return best;
+	}
+
+	/** Three-number coordinates as world points, skipping any that are not. */
+	private static List<WorldPoint> points(List<List<Integer>> raw)
+	{
+		final List<WorldPoint> out = new ArrayList<>();
+		for (List<Integer> one : raw)
+		{
+			final WorldPoint at = pointOf(one);
+			if (at != null)
+			{
+				out.add(at);
+			}
+		}
+		return out;
+	}
+
+	private static WorldPoint pointOf(List<Integer> raw)
+	{
+		return raw == null || raw.size() < 3
+			? null
+			: new WorldPoint(raw.get(0), raw.get(1), raw.get(2));
 	}
 
 	private void consider(TileObject object)
 	{
+		// Spawn events can repeat a scan's match. Identity, not id: several
+		// separate crates may intentionally share an id and all need outlining.
+		for (TileObject existing : objects)
+		{
+			if (existing == object)
+			{
+				return;
+			}
+		}
 		if (object != null && objects.size() < 64 && objectMatches(object))
 		{
 			objects.add(object);

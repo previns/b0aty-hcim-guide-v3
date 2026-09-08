@@ -24,13 +24,20 @@
  */
 package com.b0atyguide.overlay;
 
-import java.util.Locale;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import net.runelite.api.Client;
 import net.runelite.api.ObjectComposition;
 import net.runelite.api.Tile;
 import net.runelite.api.TileObject;
 import net.runelite.api.WorldView;
+import net.runelite.api.coords.WorldPoint;
 
 /**
  * Walking the loaded scene, and asking the game what an object can do.
@@ -40,7 +47,7 @@ import net.runelite.api.WorldView;
  * ground. Forgetting one is a silent miss: a wall-mounted bank booth or a
  * ground-level ladder simply never matches, with nothing to indicate why.
  */
-final class SceneObjects
+public final class SceneObjects
 {
 	private SceneObjects()
 	{
@@ -55,15 +62,29 @@ final class SceneObjects
 	static void forEach(Client client, Consumer<TileObject> visitor)
 	{
 		final WorldView view = client.getTopLevelWorldView();
+		if (view == null || view.getScene() == null)
+		{
+			return;
+		}
 		final Tile[][][] tiles = view.getScene().getTiles();
 		final int plane = view.getPlane();
-		if (plane < 0 || plane >= tiles.length)
+		if (tiles == null || plane < 0 || plane >= tiles.length || tiles[plane] == null)
 		{
 			return;
 		}
 
+		// A game object appears on every tile of its footprint. Matching those
+		// entries separately made the 3x3 cannon appear nine times in the target
+		// list and drew the same expensive model outline nine times per frame.
+		// Identity matters: two distinct objects with one id are still two
+		// targets, while one object keeps its real footprint for pathfinding.
+		final UniqueVisitor<TileObject> unique = new UniqueVisitor<>(visitor);
 		for (Tile[] row : tiles[plane])
 		{
+			if (row == null)
+			{
+				continue;
+			}
 			for (Tile tile : row)
 			{
 				if (tile == null)
@@ -74,21 +95,34 @@ final class SceneObjects
 				{
 					if (object != null)
 					{
-						visitor.accept(object);
+						unique.accept(object);
 					}
 				}
-				accept(visitor, tile.getWallObject());
-				accept(visitor, tile.getDecorativeObject());
-				accept(visitor, tile.getGroundObject());
+				unique.accept(tile.getWallObject());
+				unique.accept(tile.getDecorativeObject());
+				unique.accept(tile.getGroundObject());
 			}
 		}
 	}
 
-	private static void accept(Consumer<TileObject> visitor, TileObject object)
+	/** Scan-local identity filtering, testable without inventing a game client. */
+	static final class UniqueVisitor<T> implements Consumer<T>
 	{
-		if (object != null)
+		private final Set<T> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+		private final Consumer<T> visitor;
+
+		UniqueVisitor(Consumer<T> visitor)
 		{
-			visitor.accept(object);
+			this.visitor = visitor;
+		}
+
+		@Override
+		public void accept(T object)
+		{
+			if (object != null && seen.add(object))
+			{
+				visitor.accept(object);
+			}
 		}
 	}
 
@@ -101,16 +135,20 @@ final class SceneObjects
 	 *
 	 * <p>Must be called on the client thread.
 	 */
-	static ObjectComposition definitionOf(Client client, TileObject object)
+	public static ObjectComposition definitionOf(Client client, TileObject object)
 	{
 		final ObjectComposition composition = client.getObjectDefinition(object.getId());
 		if (composition == null)
 		{
 			return null;
 		}
-		if (composition.getImpostorIds() != null && composition.getImpostor() != null)
+		if (composition.getImpostorIds() != null)
 		{
-			return composition.getImpostor();
+			final ObjectComposition impostor = composition.getImpostor();
+			if (impostor != null)
+			{
+				return impostor;
+			}
 		}
 		return composition;
 	}
@@ -123,9 +161,9 @@ final class SceneObjects
 	 * a name list silently misses whatever nobody thought of, and there are ten
 	 * near-identical constants for a staircase alone.
 	 */
-	static boolean hasAction(String[] actions, String verb, String qualifier)
+	public static boolean hasAction(String[] actions, String verb, String qualifier)
 	{
-		if (actions == null)
+		if (actions == null || verb == null)
 		{
 			return false;
 		}
@@ -135,8 +173,79 @@ final class SceneObjects
 			{
 				continue;
 			}
-			final String lowered = action.toLowerCase(Locale.ROOT);
-			if (lowered.startsWith(verb) && (qualifier == null || lowered.contains(qualifier)))
+			if (action.regionMatches(true, 0, verb, 0, verb.length())
+				&& (qualifier == null || containsIgnoringCase(action, qualifier)))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static boolean containsIgnoringCase(String value, String part)
+	{
+		for (int i = 0; i <= value.length() - part.length(); i++)
+		{
+			if (value.regionMatches(true, i, part, 0, part.length()))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * A single instruction evaluation's scene lookup. Indexing by both the
+	 * spawned and transformed id answers many branches with one scene scan;
+	 * keeping this beyond that evaluation would hide varbit-driven changes.
+	 */
+	static final class PresenceIndex
+	{
+		private final Map<Integer, List<WorldPoint>> byId = new HashMap<>();
+
+		void add(int id, WorldPoint point)
+		{
+			byId.computeIfAbsent(id, ignored -> new ArrayList<>()).add(point);
+		}
+
+		boolean anyOf(List<Integer> ids, List<List<Integer>> zones)
+		{
+			for (Integer id : ids)
+			{
+				final List<WorldPoint> points = byId.get(id);
+				if (points == null)
+				{
+					continue;
+				}
+				for (WorldPoint point : points)
+				{
+					if (inside(zones, point))
+					{
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+	}
+
+	/** The same inclusive zone semantics for NPCs, objects and ground items. */
+	static boolean inside(List<List<Integer>> zones, WorldPoint point)
+	{
+		if (zones == null || zones.isEmpty())
+		{
+			return true;
+		}
+		if (point == null)
+		{
+			return false;
+		}
+		for (List<Integer> box : zones)
+		{
+			if (box != null && box.size() >= 6
+				&& box.get(0) <= point.getX() && point.getX() <= box.get(3)
+				&& box.get(1) <= point.getY() && point.getY() <= box.get(4)
+				&& box.get(2) <= point.getPlane() && point.getPlane() <= box.get(5))
 			{
 				return true;
 			}

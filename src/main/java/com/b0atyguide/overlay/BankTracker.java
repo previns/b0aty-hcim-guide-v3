@@ -25,6 +25,7 @@
 package com.b0atyguide.overlay;
 
 import com.b0atyguide.data.Step;
+import com.b0atyguide.path.RealPoint;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -118,8 +119,7 @@ public class BankTracker
 			return;
 		}
 
-		final WorldPoint here =
-			client.getLocalPlayer() == null ? null : client.getLocalPlayer().getWorldLocation();
+		final WorldPoint here = RealPoint.of(client, client.getLocalPlayer());
 		if (here == null)
 		{
 			clear();

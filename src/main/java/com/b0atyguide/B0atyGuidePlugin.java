@@ -25,17 +25,36 @@
 package com.b0atyguide;
 
 import com.b0atyguide.bank.GuideBankTags;
+import com.b0atyguide.bank.SetupReminder;
+import com.b0atyguide.bank.ShopOverlay;
 import com.b0atyguide.bank.WithdrawOverlay;
 import com.b0atyguide.bank.WithdrawTracker;
+import com.b0atyguide.data.Completion;
 import com.b0atyguide.data.Guide;
 import com.b0atyguide.data.GuideLoader;
 import com.b0atyguide.data.Section;
+import com.b0atyguide.data.QuestHelperSteps;
+import com.b0atyguide.progress.HeldItems;
+import java.util.List;
+import java.util.HashMap;
+import java.util.EnumMap;
+import java.util.Map;
+import net.runelite.api.coords.WorldPoint;
+import com.b0atyguide.overlay.GroundItemTracker;
+import net.runelite.api.events.ItemSpawned;
+import net.runelite.api.events.ItemDespawned;
+import net.runelite.api.Item;
+import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.ItemContainer;
+import javax.swing.SwingUtilities;
 import com.b0atyguide.data.Step;
 import com.b0atyguide.data.Tag;
 import com.b0atyguide.overlay.ApproachTracker;
 import com.b0atyguide.overlay.BankTracker;
 import com.b0atyguide.overlay.CurrentStepOverlay;
+import com.b0atyguide.overlay.DialogueHighlighter;
 import com.b0atyguide.overlay.HighlightOverlay;
+import com.b0atyguide.overlay.InterfaceOverlay;
 import com.b0atyguide.overlay.MinimapOverlay;
 import com.b0atyguide.overlay.PathOverlay;
 import com.b0atyguide.overlay.GuideIcon;
@@ -43,6 +62,7 @@ import com.b0atyguide.overlay.SceneTracker;
 import com.b0atyguide.overlay.SpellOverlay;
 import com.b0atyguide.overlay.WorldMapMarker;
 import com.b0atyguide.path.PathTracker;
+import com.b0atyguide.path.RealPoint;
 import com.b0atyguide.progress.AutoTick;
 import com.b0atyguide.progress.Progress;
 import com.b0atyguide.progress.QuestProgress;
@@ -61,17 +81,22 @@ import net.runelite.api.GameState;
 import net.runelite.api.Quest;
 import net.runelite.api.QuestState;
 import net.runelite.api.Skill;
+import net.runelite.api.events.DecorativeObjectDespawned;
+import net.runelite.api.events.DecorativeObjectSpawned;
 import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.VarbitChanged;
+import net.runelite.api.events.GroundObjectDespawned;
 import net.runelite.api.events.GroundObjectSpawned;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.events.WallObjectDespawned;
 import net.runelite.api.events.WallObjectSpawned;
+import net.runelite.api.widgets.Widget;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -166,6 +191,61 @@ public class B0atyGuidePlugin extends Plugin
 	private WorldMapMarker worldMapMarker;
 
 	@Inject
+	private DialogueHighlighter dialogueHighlighter;
+
+	@Inject
+	private GroundItemTracker groundItems;
+
+	@Inject
+	private ShopOverlay shopOverlay;
+
+	@Inject
+	private InterfaceOverlay interfaceOverlay;
+
+
+
+	@Inject
+	private SetupReminder setupReminder;
+
+	/** The Quest Helper instruction the trackers were last pointed at. */
+	private QuestHelperSteps.Instruction lastInstruction;
+
+	/**
+	 * Where the player was standing as of the last tick.
+	 *
+	 * <p>Read rather than {@link Client#getLocalPlayer()} because the step can be
+	 * re-chosen from the panel, which runs on Swing's thread, and asking the
+	 * client for the local player there is an assertion failure -- the same rule
+	 * that already applies to item containers. Written on the client thread and
+	 * volatile so the panel's thread sees it; a tick stale, which is far less
+	 * than the distance that decides any of the branches it feeds.
+	 */
+	private volatile WorldPoint playerAt;
+
+	/**
+	 * The step the guide is on.
+	 *
+	 * <p>Held here rather than read back from {@link SceneTracker}, which is
+	 * where it used to come from. That tracker is written on the client thread
+	 * and the step is chosen on Swing's, so for the tick in between it still
+	 * answered with the step before -- and the tick in between is exactly when
+	 * the quest refresh runs. The observed result: the step advanced
+	 * to "take Jug of Water", and ten milliseconds later the guidance went back
+	 * to the shopkeeper from the step before it and stayed there, until the
+	 * player un-ticked a step they had already done because the plugin was
+	 * insisting on it.
+	 */
+	private volatile Step currentStep;
+
+	/**
+	 * How close counts as arrived.
+	 *
+	 * <p>Ten tiles: a destination is a building or a bank rather than a square,
+	 * and the guide's coordinate is wherever the wiki put its map marker.
+	 */
+	private static final int ARRIVAL_TILES = 10;
+
+	@Inject
 	private GuideBankTags bankTags;
 
 	@Inject
@@ -237,6 +317,8 @@ public class B0atyGuidePlugin extends Plugin
 		overlayManager.add(pathOverlay);
 		overlayManager.add(withdrawOverlay);
 		overlayManager.add(spellOverlay);
+		overlayManager.add(shopOverlay);
+		overlayManager.add(interfaceOverlay);
 		if (config.registerBankTags())
 		{
 			bankTags.register(guide);
@@ -259,6 +341,8 @@ public class B0atyGuidePlugin extends Plugin
 		overlayManager.remove(pathOverlay);
 		overlayManager.remove(withdrawOverlay);
 		overlayManager.remove(spellOverlay);
+		overlayManager.remove(shopOverlay);
+		overlayManager.remove(interfaceOverlay);
 		if (navButton != null)
 		{
 			clientToolbar.removeNavigation(navButton);
@@ -345,8 +429,130 @@ public class B0atyGuidePlugin extends Plugin
 
 	private void onStepSelected(Step step)
 	{
-		sceneTracker.setStep(step, labelFor(step));
-		worldMapMarker.setStep(step);
+		currentStep = step;
+		lastInstruction = instructionFor(step);
+		sceneTracker.setStep(step, labelFor(step), lastInstruction);
+		clientThread.invokeLater(() -> groundItems.setStep(step, lastInstruction));
+		worldMapMarker.setStep(step, lastInstruction);
+		pathTracker.clear();
+	}
+
+	/**
+	 * What Quest Helper says to do on this step right now, or null.
+	 *
+	 * <p>Reads the quest's own progress value, which is a varbit or VarPlayer
+	 * lookup and so safe from anywhere. The instruction changes as the quest
+	 * advances, which is why it is re-read rather than resolved once when the
+	 * step is selected.
+	 */
+	private QuestHelperSteps.Instruction instructionFor(Step step)
+	{
+		if (step == null || guide == null || !config.showQuestSteps()
+			|| QuestProgress.explicitGoalSatisfied(guide, step, client::getVarbitValue,
+				client::getVarpValue, withdrawTracker.carried()))
+		{
+			return null;
+		}
+		// Only where the step is the quest, or is nested inside one. The build
+		// attaches a quest helper wherever the guide names a quest, and it names
+		// them in passing all the time -- "Head to the Grand Tree" is a walk,
+		// and answering it with "talk to King Narnode Shareen" sent players off
+		// after an npc the guide was not asking for yet.
+		//
+		// A sub-step is the other way round: "Take 1 extra Rotten Apple" under
+		// "Start Biohazard until you get the samples" is done while running
+		// Biohazard, so that is the quest to show, not the one its own bracket
+		// names.
+		final String key = step.isQuestStep()
+			? step.getQuestHelper() : step.getQuestContext();
+		final QuestHelperSteps helper = key == null ? null : guide.getQuestHelpers().get(key);
+		final QuestHelperSteps.Var var = helper == null ? null : helper.getVar();
+
+		QuestHelperSteps.Instruction instruction = null;
+		if (var != null)
+		{
+			instruction = helper.at(var.isVarbit()
+				? client.getVarbitValue(var.getId())
+				: client.getVarpValue(var.getId()));
+		}
+		if (instruction == null)
+		{
+			// A diary task has no progress value -- it is done or it is not --
+			// so Quest Helper's step for it stands until the bit is set, and
+			// setting that bit is already what ticks the guide's step off.
+			instruction = guide.diaryTaskFor(step);
+		}
+		if (instruction == null)
+		{
+			return null;
+		}
+
+		// Where the player is standing and what they are carrying decide between
+		// a conditional's branches, wherever Quest Helper's own condition was a
+		// zone, an item, or both. Downstairs it is "climb the ladder"; upstairs
+		// it is the cat the milk is for; and with the kitten in hand it is
+		// "return the kitten to Gertrude's cat".
+		// Reading a var is an array lookup, so this is safe from Swing's thread
+		// as well as the client's -- the same reason the quest's own progress
+		// value is read here rather than deferred.
+		// Several branches can ask about scenery. Share one lazy index during
+		// this evaluation only; the next call must see despawns and impostors.
+		final SceneTracker.PresenceCheck presence = sceneTracker.conditionCheck();
+		return instruction.now(playerAt, QuestProgress.guidanceInventory(step, withdrawTracker.carried()),
+			new QuestHelperSteps.Vars()
+			{
+				@Override
+				public int varbit(int id)
+				{
+					return client.getVarbitValue(id);
+				}
+
+				@Override
+				public int varplayer(int id)
+				{
+					return client.getVarpValue(id);
+				}
+
+				@Override
+				public boolean here(String kind, List<Integer> ids,
+					List<List<Integer>> zone)
+				{
+					return presence.isPresent(kind, ids, zone);
+				}
+
+				@Override
+				public boolean interfaceOpen(int id)
+				{
+					final Widget widget = client.getWidget(id);
+					return widget != null && !widget.isHidden();
+				}
+			});
+	}
+
+	/**
+	 * Re-point the trackers when the quest moves under the current step.
+	 *
+	 * <p>Without this the highlight stays on the NPC that started the quest
+	 * while the game is waiting on the next one, which is most of a quest.
+	 */
+	private void refreshQuestInstruction()
+	{
+		final Step current = currentStep;
+		if (current == null)
+		{
+			return;
+		}
+		final QuestHelperSteps.Instruction now = instructionFor(current);
+		if (now == lastInstruction)
+		{
+			return;
+		}
+		lastInstruction = now;
+		// The instruction moving can change what is on the floor to look for,
+		// and where the map should be pointing.
+		groundItems.setStep(current, now);
+		worldMapMarker.setStep(current, now);
+		sceneTracker.setStep(current, labelFor(current), now);
 		pathTracker.clear();
 	}
 
@@ -360,9 +566,13 @@ public class B0atyGuidePlugin extends Plugin
 	private void selectCurrentStep()
 	{
 		final Step current = progress.firstIncompleteStep(guide);
-		sceneTracker.setStep(current, labelFor(current));
-		worldMapMarker.setStep(current);
+		currentStep = current;
+		lastInstruction = instructionFor(current);
+		sceneTracker.setStep(current, labelFor(current), lastInstruction);
+		clientThread.invokeLater(() -> groundItems.setStep(current, lastInstruction));
+		worldMapMarker.setStep(current, lastInstruction);
 		withdrawTracker.update(guide, current);
+		setupReminder.onBankChanged(progress.sectionOf(guide, current));
 		pathTracker.clear();
 		if (panel != null)
 		{
@@ -391,6 +601,10 @@ public class B0atyGuidePlugin extends Plugin
 		}
 
 		boolean changed = false;
+		// A quest can occur in many guide steps. getState runs a client script,
+		// so ask once per quest in this pass, not once per occurrence in the
+		// guide. The map is deliberately not retained across varbit changes.
+		final Map<Quest, QuestState> states = new EnumMap<>(Quest.class);
 		for (Section section : guide.getSections())
 		{
 			for (Step step : section.getSteps())
@@ -399,13 +613,19 @@ public class B0atyGuidePlugin extends Plugin
 				{
 					continue;
 				}
-				final Tag tag = step.getVerifiableQuest();
+				// The step has to BE the quest. The guide names quests as the
+				// reason for a step constantly -- "Buy 2x Bronze Med Helm
+				// [Black Knights Fortress, Mournings End Pt II, Kings Ransom]"
+				// -- and finishing any one of those would otherwise tick a step
+				// whose helmets were never bought.
+				final Tag tag = QuestProgress.canCompleteFromQuestState(step) ? step.getVerifiableQuest() : null;
 				if (tag == null)
 				{
 					continue;
 				}
 				final Quest quest = questFor(tag.getConstant());
-				if (quest != null && quest.getState(client) == QuestState.FINISHED)
+				if (quest != null
+					&& states.computeIfAbsent(quest, q -> q.getState(client)) == QuestState.FINISHED)
 				{
 					progress.setComplete(step.getId(), true);
 					changed = true;
@@ -435,8 +655,14 @@ public class B0atyGuidePlugin extends Plugin
 		}
 
 		final Step current = progress.firstIncompleteStep(guide);
+		// Which of Quest Helper's own steps is being shown right now, branches
+		// and all. Re-read rather than taken from lastInstruction: a branch can
+		// turn over between ticks without the step changing, and that turning
+		// over is precisely the event this is watching for.
+		final QuestHelperSteps.Instruction showing = instructionFor(current);
+		final Integer panelNow = showing == null ? null : showing.getPanel();
 		if (questProgress.hasAdvanced(guide, current, client::getVarbitValue,
-			client::getVarpValue))
+			client::getVarpValue, panelNow, withdrawTracker.carried()))
 		{
 			progress.setComplete(current.getId(), true);
 			questProgress.clear();
@@ -444,7 +670,8 @@ public class B0atyGuidePlugin extends Plugin
 			selectCurrentStep();
 			return;
 		}
-		questProgress.watch(guide, current, client::getVarbitValue, client::getVarpValue);
+		questProgress.watch(guide, current, client::getVarbitValue, client::getVarpValue,
+			panelNow);
 	}
 
 	/**
@@ -461,7 +688,8 @@ public class B0atyGuidePlugin extends Plugin
 			return;
 		}
 
-		if (AutoTick.skills(guide, progress, this::realLevel) > 0)
+		if (AutoTick.completions(guide, progress, client::getVarpValue, this::realLevel,
+			Completion.KIND_SKILL) > 0)
 		{
 			saveProgress();
 			selectCurrentStep();
@@ -500,7 +728,8 @@ public class B0atyGuidePlugin extends Plugin
 			return;
 		}
 
-		if (AutoTick.diaries(guide, progress, client::getVarpValue) > 0)
+		if (AutoTick.completions(guide, progress, client::getVarpValue, this::realLevel,
+			Completion.KIND_DIARY) > 0)
 		{
 			saveProgress();
 			selectCurrentStep();
@@ -533,7 +762,9 @@ public class B0atyGuidePlugin extends Plugin
 		{
 			// The scene is rebuilt, so every cached scan is stale.
 			approachTracker.onSceneChanged();
+			groundItems.onSceneChanged();
 			bankTracker.onSceneChanged();
+			pathTracker.onSceneChanged();
 			pathTracker.clear();
 		}
 		if (event.getGameState() == GameState.LOGGED_IN)
@@ -551,8 +782,21 @@ public class B0atyGuidePlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
-		// Order matters: the path and the arrows both ask the approach tracker
-		// where they are really heading.
+		// First of all: everything below decides using where the player is, and
+		// the panel's thread reads this same snapshot rather than the client.
+		playerAt = RealPoint.of(client, client.getLocalPlayer());
+
+		// Order matters. Before the trackers, because a quest that moved
+		// changes what they are looking for and doing it after would leave them
+		// a tick behind; and the path and the arrows both ask the approach
+		// tracker where they are really heading.
+		dialogueHighlighter.onTick();
+		refreshQuestInstruction();
+		syncArrived();
+		// Acquiring an explicit quest item need not move a varbit (Waterfall's
+		// book is received before it is read). Check the fresh carried snapshot
+		// each game tick as well as responding to quest progress events.
+		syncQuestProgress();
 		approachTracker.update();
 		bankTracker.update(sceneTracker.getStep());
 		pathTracker.update();
@@ -565,6 +809,20 @@ public class B0atyGuidePlugin extends Plugin
 		}
 	}
 
+	/** A wanted item hit the floor -- the chicken's bones and feather. */
+	@Subscribe
+	public void onItemSpawned(ItemSpawned event)
+	{
+		groundItems.onItemSpawned(event);
+	}
+
+	/** Someone picked it up, which may or may not have been this player. */
+	@Subscribe
+	public void onItemDespawned(ItemDespawned event)
+	{
+		groundItems.onItemDespawned(event);
+	}
+
 	/** What the player is carrying changed, so the missing list has too. */
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged event)
@@ -572,6 +830,99 @@ public class B0atyGuidePlugin extends Plugin
 		if (guide != null)
 		{
 			withdrawTracker.update(guide, progress.firstIncompleteStep(guide));
+			syncAcquired();
+		}
+	}
+
+	/**
+	 * Tick the current step once the player is standing where it sent them.
+	 *
+	 * <p>Only steps the build marked as pure travel, and only the current one.
+	 * The radius is generous because a destination is a building or a bank, not
+	 * a tile, and stopping a few squares short still means you got there.
+	 */
+	private void syncArrived()
+	{
+		if (!config.autoTickArrival() || guide == null)
+		{
+			return;
+		}
+
+		final Step current = progress.firstIncompleteStep(guide);
+		final WorldPoint where = current == null ? null : current.getArrivesAt();
+		final WorldPoint at = playerAt;
+		if (where == null || at == null)
+		{
+			return;
+		}
+
+		if (at.getPlane() == where.getPlane() && at.distanceTo(where) <= ARRIVAL_TILES)
+		{
+			progress.setComplete(current.getId(), true);
+			saveProgress();
+			selectCurrentStep();
+		}
+	}
+
+	/**
+	 * Tick the current step once the player is holding what it told them to get.
+	 *
+	 * <p>Only the current step, deliberately. Sweeping the guide would tick any
+	 * future step whose items you happen to be carrying -- a later "Withdraw:
+	 * Coins" would complete itself the moment you picked up a coin, hundreds of
+	 * banks early.
+	 *
+	 * <p>Reads the item containers, so it needs the client thread.
+	 */
+	private void syncAcquired()
+	{
+		if (!config.autoTickAcquired() || guide == null)
+		{
+			return;
+		}
+
+		final Step current = progress.firstIncompleteStep(guide);
+		if (current == null || !current.isAcquires())
+		{
+			return;
+		}
+
+		clientThread.invokeLater(() ->
+		{
+			final Map<Integer, Integer> held = new HashMap<>();
+			tally(held, client.getItemContainer(InventoryID.INV));
+			tally(held, client.getItemContainer(InventoryID.WORN));
+			// Inventory and equipment each post their own change, so this
+			// arrives twice for one pickup. Ticking twice is harmless but it
+			// saved twice and re-chose the step twice, and it made the log read
+			// as though the guide had jumped two steps.
+			if (HeldItems.satisfied(current, held) && !progress.isComplete(current.getId()))
+			{
+				progress.setComplete(current.getId(), true);
+				saveProgress();
+				SwingUtilities.invokeLater(this::selectCurrentStep);
+			}
+		});
+	}
+
+	/** Add a container's contents to the running count, worn equipment included. */
+	private static void tally(Map<Integer, Integer> into, ItemContainer container)
+	{
+		if (container == null)
+		{
+			return;
+		}
+		for (Item item : container.getItems())
+		{
+			if (item != null && item.getId() >= 0)
+			{
+				// Not "> 0". An empty slot is -1; zero is Dwarf remains, the
+				// first item in the game, and excluding it meant nobody could
+				// ever be holding one. Quest Helper's Dwarf Cannon branches on
+				// exactly that item, so the guide kept saying "get the dwarf
+				// remains at the top of the tower" to a player carrying them.
+				into.merge(item.getId(), Math.max(1, item.getQuantity()), Integer::sum);
+			}
 		}
 	}
 
@@ -596,6 +947,10 @@ public class B0atyGuidePlugin extends Plugin
 		syncDiaryCompletion();
 		syncSkillCompletion();
 		syncQuestProgress();
+		// Most doors replace their scene object when opened, but an impostor can
+		// also change its actions in place when a varbit flips. The route's cached
+		// Open/Slash scan has to be rebuilt on the next tick in either case.
+		pathTracker.onSceneObjectChanged();
 		questCheckPending = true;
 	}
 
@@ -615,24 +970,52 @@ public class B0atyGuidePlugin extends Plugin
 	public void onGameObjectSpawned(GameObjectSpawned event)
 	{
 		sceneTracker.onGameObjectSpawned(event);
+		pathTracker.onSceneObjectChanged();
 	}
 
 	@Subscribe
 	public void onGameObjectDespawned(GameObjectDespawned event)
 	{
 		sceneTracker.onGameObjectDespawned(event);
+		pathTracker.onSceneObjectChanged();
 	}
 
 	@Subscribe
 	public void onWallObjectSpawned(WallObjectSpawned event)
 	{
 		sceneTracker.onWallObjectSpawned(event);
+		pathTracker.onSceneObjectChanged();
+	}
+
+	@Subscribe
+	public void onWallObjectDespawned(WallObjectDespawned event)
+	{
+		pathTracker.onSceneObjectChanged();
 	}
 
 	@Subscribe
 	public void onGroundObjectSpawned(GroundObjectSpawned event)
 	{
 		sceneTracker.onGroundObjectSpawned(event);
+		pathTracker.onSceneObjectChanged();
+	}
+
+	@Subscribe
+	public void onGroundObjectDespawned(GroundObjectDespawned event)
+	{
+		pathTracker.onSceneObjectChanged();
+	}
+
+	@Subscribe
+	public void onDecorativeObjectSpawned(DecorativeObjectSpawned event)
+	{
+		pathTracker.onSceneObjectChanged();
+	}
+
+	@Subscribe
+	public void onDecorativeObjectDespawned(DecorativeObjectDespawned event)
+	{
+		pathTracker.onSceneObjectChanged();
 	}
 
 	/**
@@ -647,6 +1030,7 @@ public class B0atyGuidePlugin extends Plugin
 	{
 		bankTags.clear();
 		withdrawTracker.clear();
+		withdrawOverlay.clear();
 		pathTracker.clear();
 		approachTracker.clear();
 		bankTracker.clear();
@@ -654,6 +1038,9 @@ public class B0atyGuidePlugin extends Plugin
 		sectionImages.clear();
 		worldMapMarker.clear();
 		sceneTracker.clear();
+		groundItems.clear();
+		setupReminder.clear();
+		dialogueHighlighter.clear();
 	}
 
 	@Subscribe

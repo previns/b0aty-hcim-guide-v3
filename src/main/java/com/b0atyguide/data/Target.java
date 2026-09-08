@@ -51,6 +51,7 @@ public class Target
 	private String confidence;
 	private List<Integer> ids;
 	private List<List<Integer>> points;
+	private boolean scattered;
 
 	public String getName()
 	{
@@ -95,6 +96,23 @@ public class Target
 	public List<List<Integer>> getPoints()
 	{
 		return points == null ? Collections.emptyList() : points;
+	}
+
+	/**
+	 * Whether the coordinates disagree about where this is.
+	 *
+	 * <p>"Use the Deposit box by Entrana" resolved to ninety-one of them, ten
+	 * thousand tiles apart, and each one became a pin on the world map. A set
+	 * that wide is not a place with a fuzzy middle, it is several places, and
+	 * the honest answer to "where" is that we do not know -- the same rule the
+	 * pipeline has always applied to an ambiguous name.
+	 *
+	 * <p>The ids are unaffected. Whichever deposit box is in the room is still
+	 * outlined; only the map marker and the route go quiet.
+	 */
+	public boolean isScattered()
+	{
+		return scattered;
 	}
 
 	public boolean isWikiBacked()

@@ -48,6 +48,7 @@ public class Guide
 	private String sourceRevisionAt;
 	private List<Section> sections;
 	private Map<String, QuestHelperSteps> questHelpers;
+	private Map<String, QuestHelperSteps.Instruction> diaryTasks;
 	private Map<String, String> imageHashes;
 	private List<String> preamble;
 
@@ -116,6 +117,25 @@ public class Guide
 	}
 
 	/**
+	 * What Quest Helper does for a diary task, keyed by the task's own bit.
+	 *
+	 * <p>A diary helper has no progress value to key on -- a task is done or it
+	 * is not -- so it hangs each task off that task's varplayer bit. That is the
+	 * same number this guide already carries in {@code completion}, read from
+	 * the same constants, so the join is two integers against two integers.
+	 */
+	public Map<String, QuestHelperSteps.Instruction> getDiaryTasks()
+	{
+		return diaryTasks == null ? Collections.emptyMap() : diaryTasks;
+	}
+
+	public QuestHelperSteps.Instruction diaryTaskFor(Step step)
+	{
+		final String key = step == null ? null : step.getDiaryTask();
+		return key == null ? null : getDiaryTasks().get(key);
+	}
+
+	/**
 	 * The episode a section belongs to, or null.
 	 *
 	 * <p>The guide is a series of videos as much as a list of steps, and a
@@ -170,4 +190,5 @@ public class Guide
 		}
 		return total;
 	}
+
 }

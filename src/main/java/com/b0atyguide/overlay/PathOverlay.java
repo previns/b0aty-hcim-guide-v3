@@ -54,6 +54,9 @@ public class PathOverlay extends Overlay
 	private static final int WIDTH = 3;
 	/** Beyond this the line is dense clutter rather than guidance. */
 	private static final int MAX_TILES_DRAWN = 60;
+	private static final Stroke PATH_STROKE =
+		new BasicStroke(WIDTH, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+	private final FadePalette palette = new FadePalette();
 
 	@Inject
 	private Client client;
@@ -88,10 +91,11 @@ public class PathOverlay extends Overlay
 		final Object prior = graphics.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
 		final Stroke priorStroke = graphics.getStroke();
 		graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		graphics.setStroke(new BasicStroke(WIDTH, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+		graphics.setStroke(PATH_STROKE);
 
 		final Color colour = config.highlightColor();
 		final int drawn = Math.min(path.size(), MAX_TILES_DRAWN);
+		final Color[] colours = palette.forPath(colour, drawn);
 		Point previous = canvas(path.get(0));
 
 		for (int i = 1; i < drawn; i++)
@@ -101,7 +105,7 @@ public class PathOverlay extends Overlay
 			{
 				// Fade with distance so the near end, which is the bit being
 				// walked next, reads strongest.
-				graphics.setColor(fade(colour, i, drawn));
+				graphics.setColor(colours[i]);
 				graphics.drawLine(previous.getX(), previous.getY(),
 					current.getX(), current.getY());
 			}
@@ -129,5 +133,30 @@ public class PathOverlay extends Overlay
 		final float ratio = 1f - (index / (float) total) * 0.6f;
 		return new Color(colour.getRed(), colour.getGreen(), colour.getBlue(),
 			Math.max(40, Math.round(220 * ratio)));
+	}
+
+	/**
+	 * The gradient depends on path length and configured colour, not the camera.
+	 * Keeping only the current palette avoids up to 59 new Color objects per
+	 * frame without retaining old paths or caching stale screen projections.
+	 */
+	static final class FadePalette
+	{
+		private Color colour;
+		private Color[] colours = new Color[0];
+
+		Color[] forPath(Color requested, int length)
+		{
+			if (!requested.equals(colour) || colours.length != length)
+			{
+				colour = requested;
+				colours = new Color[length];
+				for (int i = 0; i < length; i++)
+				{
+					colours[i] = fade(requested, i, length);
+				}
+			}
+			return colours;
+		}
 	}
 }

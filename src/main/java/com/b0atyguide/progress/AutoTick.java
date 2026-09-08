@@ -53,58 +53,39 @@ public final class AutoTick
 	}
 
 	/**
-	 * Tick every step whose skill target has been reached.
+	 * Tick every step all of whose recorded conditions now hold.
 	 *
-	 * <p>As exact as the diary bits: the real level is a number the game keeps,
-	 * not something inferred. Deciding which steps have a real target is the
-	 * part that needed a person -- a boosted level is never reached, and
-	 * "70 prayer is banked" is experience rather than a level.
+	 * <p>One pass rather than one per signal, because a step can need several
+	 * things at once. "Train Draynor Agility to 5 Agility [Lumbridge Easy
+	 * Diary]" carries a diary bit and a level, and it is done only when both
+	 * are true -- the Lumbridge task can be finished below level 5, so ticking
+	 * on the bit alone marked training complete that the player still owed.
+	 * Splitting this into a diaries() and a skills() pass is what let each one
+	 * tick a step the other had not agreed to.
 	 *
-	 * @param level reads a real skill level by name; unknown names give 0
+	 * <p>Both lookups are plain reads -- a VarPlayer is an array index, a real
+	 * level is a number the game keeps -- so this is safe to call from inside a
+	 * client script, unlike anything that asks for quest state.
+	 *
+	 * @param varp    reads a VarPlayer by id; must not run a client script
+	 * @param level   reads a real, unboosted skill level by name
 	 * @return how many steps were newly ticked
 	 */
-	public static int skills(Guide guide, Progress progress, ToIntFunction<String> level)
+	public static int completions(Guide guide, Progress progress,
+		IntUnaryOperator varp, ToIntFunction<String> level)
 	{
-		if (guide == null)
-		{
-			return 0;
-		}
-
-		int ticked = 0;
-		for (Section section : guide.getSections())
-		{
-			for (Step step : section.getSteps())
-			{
-				if (progress.isComplete(step.getId()))
-				{
-					continue;
-				}
-				final Completion completion = step.getCompletion();
-				if (completion != null && completion.isSkill()
-					&& level.applyAsInt(completion.getSkill()) >= completion.getLevel())
-				{
-					progress.setComplete(step.getId(), true);
-					ticked++;
-				}
-			}
-		}
-		return ticked;
+		return completions(guide, progress, varp, level, (String) null);
 	}
 
-	/**
-	 * Tick every diary step whose bit is set.
-	 *
-	 * @param varp reads a VarPlayer by id; must not run a client script
-	 * @return how many steps were newly ticked
-	 */
-	public static int diaries(Guide guide, Progress progress, IntUnaryOperator varp)
+	public static int completions(Guide guide, Progress progress,
+		IntUnaryOperator varp, ToIntFunction<String> level, String onlyKind)
 	{
 		if (guide == null)
 		{
 			return 0;
 		}
 
-		int ticked = 0;
+		int count = 0;
 		for (Section section : guide.getSections())
 		{
 			for (Step step : section.getSteps())
@@ -114,14 +95,18 @@ public final class AutoTick
 					continue;
 				}
 				final Completion completion = step.getCompletion();
-				if (completion != null && completion.isDiary()
-					&& completion.isSetIn(varp.applyAsInt(completion.getVarplayer())))
+				if (completion == null
+					|| (onlyKind != null && !onlyKind.equals(completion.getKind())))
+				{
+					continue;
+				}
+				if (completion.isSatisfiedBy(varp, level))
 				{
 					progress.setComplete(step.getId(), true);
-					ticked++;
+					count++;
 				}
 			}
 		}
-		return ticked;
+		return count;
 	}
 }

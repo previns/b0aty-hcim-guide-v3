@@ -25,8 +25,10 @@
 package com.b0atyguide.overlay;
 
 import com.b0atyguide.data.Approach;
+import com.b0atyguide.data.Destination;
 import com.b0atyguide.data.Step;
 import com.b0atyguide.data.Target;
+import com.b0atyguide.path.RealPoint;
 import java.util.List;
 import java.util.Objects;
 import javax.inject.Inject;
@@ -34,7 +36,6 @@ import javax.inject.Singleton;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.ObjectComposition;
-import net.runelite.api.Player;
 import net.runelite.api.TileObject;
 import net.runelite.api.coords.WorldPoint;
 
@@ -77,6 +78,14 @@ public class ApproachTracker
 	private static final int MAX_TILES = 25;
 
 	/**
+	 * How near a target has to be for its floor to be the thing in the way.
+	 *
+	 * <p>Wider than the loaded scene on purpose: a target at the edge of it is
+	 * still somewhere the player can see, and its stairs are still the answer.
+	 */
+	private static final int SAME_PLACE = 128;
+
+	/**
 	 * How far from the recorded coordinate a climbable object may sit and still
 	 * be the one meant. Small: this is correcting for an id that names a
 	 * sibling variant, not searching for a different staircase.
@@ -94,6 +103,13 @@ public class ApproachTracker
 	/** What the held approach was found for; null means it is not valid. */
 	private String lastStepId;
 	private WorldPoint lastScanFrom;
+
+	/**
+	 * Where the map keeps its basements, dungeons and caves.
+	 *
+	 * <p>Everything walkable on the surface is south of this.
+	 */
+	private static final int UNDERGROUND_Y = 6400;
 
 	/** The stairs or ladder to take, or null when the target is reachable. */
 	public TileObject getApproach()
@@ -116,9 +132,8 @@ public class ApproachTracker
 	public void update()
 	{
 		final Step step = tracker.getStep();
-		final Player player = client.getLocalPlayer();
 		final String stepId = step == null ? null : step.getId();
-		final WorldPoint at = player == null ? null : player.getWorldLocation();
+		final WorldPoint at = RealPoint.of(client, client.getLocalPlayer());
 		if (Objects.equals(stepId, lastStepId)
 			&& Objects.equals(at, lastScanFrom))
 		{
@@ -159,20 +174,31 @@ public class ApproachTracker
 			return;
 		}
 
-		final Player local = client.getLocalPlayer();
-		if (local == null)
-		{
-			return;
-		}
-		final WorldPoint here = local.getWorldLocation();
-
-		final Integer targetPlane = planeOf(target);
-		if (targetPlane == null || targetPlane == here.getPlane())
+		final WorldPoint here = RealPoint.of(client, client.getLocalPlayer());
+		if (here == null)
 		{
 			return;
 		}
 
-		final String wanted = targetPlane > here.getPlane() ? CLIMB_UP : CLIMB_DOWN;
+		final Integer targetLevel = levelOf(target);
+		if (targetLevel == null || targetLevel == levelOf(here))
+		{
+			return;
+		}
+
+		// And only when the level is what is actually stopping the player. A
+		// staircase is the answer to "the thing is above me", not to "the thing
+		// is six hundred tiles west and happens to be upstairs" -- and asked
+		// the second way this pointed at whatever ladder was nearest, so a step
+		// reading "Head to the Grand Tree" sent players to a staircase in
+		// Edgeville. Walking there comes first; the stairs are a problem for
+		// when they arrive.
+		if (!withinReach(target, here))
+		{
+			return;
+		}
+
+		final String wanted = targetLevel > levelOf(here) ? CLIMB_UP : CLIMB_DOWN;
 
 		// The quest's own answer, when there is one.
 		final Approach known = step.getApproach();
@@ -185,7 +211,98 @@ public class ApproachTracker
 			}
 		}
 
+		// A step that names somewhere to walk on this level is answered by
+		// walking there. "Head to the Grand Tree" points at a spot on the
+		// tree's first floor and at its base on the ground; guessing at a
+		// staircase sent players round the tree's several staircases instead of
+		// to the gate. Forty-six of the 191 steps on another level say this.
+		if (walkableGround(step))
+		{
+			return;
+		}
+
 		approach = nearestClimbable(here, wanted);
+	}
+
+	/**
+	 * Whether the step names somewhere on the ground to head for.
+	 *
+	 * <p>Then that is the instruction, and the stairs are for after. The guess
+	 * below is only worth making when there is nothing better, and in a building
+	 * with several staircases it is wrong as often as not.
+	 */
+	private static boolean walkableGround(Step step)
+	{
+		final Destination place = step.getDestination();
+		if (place == null)
+		{
+			return false;
+		}
+		for (List<Integer> raw : place.getPoints())
+		{
+			if (raw != null && raw.size() >= 3
+				&& raw.get(2) == 0 && raw.get(1) < UNDERGROUND_Y)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Whether the target is close enough that its floor is the obstacle.
+	 *
+	 * <p>Measured flat, ignoring the level, because that is the question: is
+	 * this thing in the building the player is standing in, or is it a journey
+	 * away. A little wider than the loaded scene, so a target at the far edge of
+	 * it still counts.
+	 */
+	public static boolean withinReach(Target target, WorldPoint here)
+	{
+		for (List<Integer> raw : target.getPoints())
+		{
+			if (raw != null && raw.size() >= 3)
+			{
+				final int away = Math.abs(raw.get(0) - here.getX())
+					+ Math.abs(raw.get(1) - here.getY());
+				if (away <= SAME_PLACE)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * How far up or down a point is, counting the underground as below ground.
+	 *
+	 * <p>Comparing planes alone is not enough. A basement or dungeon is not a
+	 * different plane in this game: it is the same plane in a band of the map
+	 * far to the north, so Sedridor's basement reads as plane 0 exactly like
+	 * the tower above it. Comparing planes therefore decided the player was
+	 * already there and pointed at nothing, on every basement, dungeon and cave
+	 * in the guide.
+	 *
+	 * <p>The band starts well above anywhere on the surface -- the furthest
+	 * north surface ground sits under 4000 -- so the test cannot mistake a real
+	 * place for a cellar.
+	 */
+	private static int levelOf(WorldPoint point)
+	{
+		return point.getY() >= UNDERGROUND_Y ? -1 : point.getPlane();
+	}
+
+	private static Integer levelOf(Target target)
+	{
+		for (List<Integer> raw : target.getPoints())
+		{
+			if (raw != null && raw.size() >= 3)
+			{
+				return raw.get(1) >= UNDERGROUND_Y ? -1 : raw.get(2);
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -244,19 +361,6 @@ public class ApproachTracker
 				object = candidate;
 			}
 		}
-	}
-
-
-	private static Integer planeOf(Target target)
-	{
-		for (List<Integer> raw : target.getPoints())
-		{
-			if (raw != null && raw.size() >= 3)
-			{
-				return raw.get(2);
-			}
-		}
-		return null;
 	}
 
 	/**

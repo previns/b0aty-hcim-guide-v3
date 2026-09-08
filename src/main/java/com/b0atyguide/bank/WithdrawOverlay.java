@@ -25,10 +25,14 @@
 package com.b0atyguide.bank;
 
 import com.b0atyguide.B0atyGuideConfig;
+import com.b0atyguide.overlay.SceneTracker;
 import com.b0atyguide.overlay.Ring;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import javax.inject.Inject;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetUtil;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.ui.overlay.WidgetItemOverlay;
 
@@ -43,12 +47,17 @@ import net.runelite.client.ui.overlay.WidgetItemOverlay;
 public class WithdrawOverlay extends WidgetItemOverlay
 {
 	private static final int PADDING = 1;
+	private final ItemHighlightTargets targets = new ItemHighlightTargets();
 
 	@Inject
 	private WithdrawTracker tracker;
 
 	@Inject
+	private SceneTracker scene;
+
+	@Inject
 	private B0atyGuideConfig config;
+
 
 	@Inject
 	WithdrawOverlay()
@@ -60,12 +69,34 @@ public class WithdrawOverlay extends WidgetItemOverlay
 	@Override
 	public void renderItemOverlay(Graphics2D graphics, int itemId, WidgetItem item)
 	{
-		// Two different things, drawn the same way: something still to withdraw,
-		// and the item this step travels with. The second is not "missing" --
-		// the player usually has it -- so it is a separate question.
+		// Three different things, drawn the same way: something still to
+		// withdraw, the item this step travels with, and what the quest is
+		// waiting on. Only the first is "missing" -- the player usually has the
+		// other two -- so they are separate questions.
 		final boolean travel = config.showTeleportItem() && tracker.isTeleport(itemId);
-		final boolean needed = config.highlightWithdrawItems() && tracker.isMissing(itemId);
-		if (!travel && !needed)
+
+		// What Quest Helper would ring for the step the quest is on. In the
+		// inventory, where the player is about to click it, and only for the
+		// instruction in force -- the rest of the quest's shopping list is not
+		// what they need right now.
+		final boolean quest = config.showQuestSteps()
+			&& targets.neededByQuest(scene.getInstruction(), itemId);
+
+		// And the item the step itself is about. "Read the Ardougne Teleport
+		// Scroll in your inventory" resolves to the scroll and nothing was
+		// marking it: an item target is not scenery, so the model outline had
+		// nothing to draw on and the bank ring only ever looked at the bank.
+		final boolean itself = config.highlightWithdrawItems()
+			&& targets.isStepItem(scene.getStep(), itemId);
+
+		// Only in the bank. Ringing a withdraw item in the inventory too means
+		// the ones already taken out keep glowing while the player works down
+		// the list, which reads as "still missing" when it is the opposite.
+		final boolean needed = config.highlightWithdrawItems()
+			&& tracker.isMissing(itemId)
+			&& inTheBank(item);
+
+		if (!travel && !needed && !quest && !itself)
 		{
 			return;
 		}
@@ -77,5 +108,25 @@ public class WithdrawOverlay extends WidgetItemOverlay
 		}
 
 		Ring.draw(graphics, bounds, config.highlightColor(), PADDING);
+	}
+
+	/** Release selected guide data on profile changes and plugin shutdown. */
+	public void clear()
+	{
+		targets.clear();
+	}
+
+	/**
+	 * Whether this slot is in the bank rather than the inventory.
+	 *
+	 * <p>One overlay draws over both, so the container has to be asked. The
+	 * teleport item is the other way round -- that one belongs in the
+	 * inventory, where the player will click it.
+	 */
+	private static boolean inTheBank(WidgetItem item)
+	{
+		final Widget widget = item.getWidget();
+		return widget != null
+			&& WidgetUtil.componentToInterface(widget.getId()) == InterfaceID.BANKMAIN;
 	}
 }

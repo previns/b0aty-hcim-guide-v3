@@ -24,6 +24,9 @@
  */
 package com.b0atyguide.data;
 
+import java.util.function.IntUnaryOperator;
+import java.util.function.ToIntFunction;
+
 /**
  * A signal the game itself sets when a step is done.
  *
@@ -95,5 +98,56 @@ public class Completion
 	public boolean isSetIn(int varplayerValue)
 	{
 		return ((varplayerValue >> bit) & 1) == 1;
+	}
+
+	/**
+	 * Whether every condition this step records is now true.
+	 *
+	 * <p>A step can carry more than one. "Train Draynor Agility to 5 Agility
+	 * [Lumbridge Easy Diary]" needs the diary bit set <em>and</em> the level
+	 * reached: the Lumbridge task can be finished below level 5, so ticking on
+	 * the bit alone marked training complete that the player still had to do.
+	 *
+	 * <p>Conditions are ANDed, and a completion carrying none is never
+	 * satisfied -- an empty rule must not tick a step.
+	 *
+	 * @param varplayer reads a VarPlayer by id; an array lookup, safe anywhere
+	 * @param level     reads a real (unboosted) skill level by name
+	 */
+	public boolean isSatisfiedBy(IntUnaryOperator varplayer, ToIntFunction<String> level)
+	{
+		boolean any = false;
+
+		if (hasDiaryCondition())
+		{
+			any = true;
+			if (!isSetIn(varplayer.applyAsInt(this.varplayer)))
+			{
+				return false;
+			}
+		}
+
+		if (hasSkillCondition())
+		{
+			any = true;
+			if (level.applyAsInt(skill) < this.level)
+			{
+				return false;
+			}
+		}
+
+		return any;
+	}
+
+	/** A diary task bit worth reading. */
+	public boolean hasDiaryCondition()
+	{
+		return varplayer > 0 && bit >= 0 && bit <= 31;
+	}
+
+	/** A real skill level worth reading. */
+	public boolean hasSkillCondition()
+	{
+		return skill != null && level >= 1 && level <= 99;
 	}
 }

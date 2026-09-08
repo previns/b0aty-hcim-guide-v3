@@ -26,7 +26,9 @@ package com.b0atyguide.overlay;
 
 import com.b0atyguide.B0atyGuideConfig;
 import com.b0atyguide.data.Step;
+import com.b0atyguide.data.QuestHelperSteps;
 import com.b0atyguide.data.Target;
+import com.b0atyguide.path.RealPoint;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -72,9 +74,33 @@ public class MinimapOverlay extends Overlay
 	/** Beyond this the target is off the minimap and localToMinimap returns null. */
 	private static final int MAX_DISTANCE = 6400;
 
+	/**
+	 * A full turn of the camera, in the units the yaw is counted in.
+	 *
+	 * <p>Fourteen bits, not eleven. RuneLite keeps two sine tables -- SINE at
+	 * 2048 units to a turn and SINE14 at 16384 -- and {@code localToMinimap}
+	 * uses the second, masking the yaw with 0x3fff. Dividing by 2048 spins the
+	 * arrow eight times per camera revolution, which lands on the right answer
+	 * only at due north and looks plausible enough elsewhere to miss.
+	 */
+	private static final int YAW_UNITS = 0x4000;
+	private static final int YAW_MASK = YAW_UNITS - 1;
+
 	/** Size of the rim pointer, and how far inside the rim it sits. */
 	private static final int EDGE_ARROW = 10;
 	private static final int EDGE_INSET = 8;
+	private static final Color POINTER_SHADOW = new Color(0, 0, 0, 140);
+	private static final Polygon POINTER = new Polygon(
+		new int[]{0, -EDGE_ARROW / 2, EDGE_ARROW / 2},
+		new int[]{-EDGE_ARROW, EDGE_ARROW / 2, EDGE_ARROW / 2}, 3);
+	private static final int[] MINIMAP_WIDGETS = {
+		InterfaceID.ToplevelOsrsStretch.MAP_MINIMAP,
+		InterfaceID.ToplevelPreEoc.MAP_MINIMAP,
+		InterfaceID.Toplevel.MAPCONTAINER,
+		InterfaceID.Toplevel.MINIMAP,
+		InterfaceID.ToplevelOsrsStretch.MINIMAP,
+		InterfaceID.ToplevelPreEoc.MINIMAP,
+	};
 
 	@Inject
 	private Client client;
@@ -146,7 +172,7 @@ public class MinimapOverlay extends Overlay
 			return;
 		}
 
-		final WorldPoint from = local.getWorldLocation();
+		final WorldPoint from = RealPoint.of(client, local);
 		final double dx = destination.getX() - from.getX();
 		final double dy = destination.getY() - from.getY();
 		if (dx == 0 && dy == 0)
@@ -154,20 +180,41 @@ public class MinimapOverlay extends Overlay
 			return;
 		}
 
-		// The minimap rotates with the camera, so the bearing has to be taken
-		// in camera space or the arrow points north when the player faces east.
-		final double camera = client.getCameraYaw() * (Math.PI * 2d / 2048d);
-		final double bearing = Math.atan2(dx, dy) - camera;
-
 		final Rectangle bounds = minimap.getBounds();
 		final int cx = bounds.x + bounds.width / 2;
 		final int cy = bounds.y + bounds.height / 2;
 		final int radius = Math.min(bounds.width, bounds.height) / 2 - EDGE_INSET;
 
+		final double bearing = screenBearing(dx, dy, client.getCameraYawTarget());
 		final int x = cx + (int) Math.round(Math.sin(bearing) * radius);
 		final int y = cy - (int) Math.round(Math.cos(bearing) * radius);
 
 		drawPointer(graphics, x, y, bearing);
+	}
+
+	/**
+	 * Which way the target lies, as an angle clockwise from the top of the
+	 * minimap.
+	 *
+	 * <p>{@code atan2(east, north)} is already a compass bearing: due north
+	 * gives 0, due east +pi/2. The minimap then rotates with the camera, so the
+	 * camera's own yaw is <em>added</em> to bring the bearing into the map's
+	 * frame. This matched the client's {@code localToMinimap}, which computes
+	 * {@code x*cos(a) + y*sin(a)}, only once the sign was right -- subtracting
+	 * mirrored the rim position about north whenever the camera was turned.
+	 *
+	 * <p>Pure and static so the arithmetic can be tested. A mirrored arrow is
+	 * invisible in a test of the drawing and obvious in a test of the angle.
+	 *
+	 * @param dx        tiles east of the player, negative for west
+	 * @param dy        tiles north of the player, negative for south
+	 * @param cameraYaw the client's yaw target, 0 to 16383 -- the game's own
+	 *                  14-bit angle unit, which is what the minimap is drawn in
+	 */
+	static double screenBearing(double dx, double dy, int cameraYaw)
+	{
+		final double camera = (cameraYaw & YAW_MASK) * (Math.PI * 2d / YAW_UNITS);
+		return Math.atan2(dx, dy) + camera;
 	}
 
 	/** A filled triangle pointing outward along the bearing. */
@@ -179,20 +226,18 @@ public class MinimapOverlay extends Overlay
 
 		final AffineTransform priorTransform = graphics.getTransform();
 		graphics.translate(x, y);
-		// Screen y grows downward, so the rotation is negated against the
-		// compass bearing.
-		graphics.rotate(-bearing);
+		// Screen y grows downward, which makes a positive Java2D rotation
+		// clockwise -- the same sense as a compass bearing. Negating it here
+		// mirrored the triangle, so a target due east drew an arrow pointing
+		// west while sitting on the correct side of the rim.
+		graphics.rotate(bearing);
 
-		final Polygon pointer = new Polygon(
-			new int[]{0, -EDGE_ARROW / 2, EDGE_ARROW / 2},
-			new int[]{-EDGE_ARROW, EDGE_ARROW / 2, EDGE_ARROW / 2},
-			3);
-		graphics.setColor(new Color(0, 0, 0, 140));
-		graphics.drawPolygon(pointer);
+		graphics.setColor(POINTER_SHADOW);
+		graphics.drawPolygon(POINTER);
 		graphics.setColor(config.highlightColor());
-		graphics.fillPolygon(pointer);
+		graphics.fillPolygon(POINTER);
 		graphics.setColor(Color.WHITE);
-		graphics.drawPolygon(pointer);
+		graphics.drawPolygon(POINTER);
 
 		graphics.setTransform(priorTransform);
 		if (prior != null)
@@ -209,12 +254,11 @@ public class MinimapOverlay extends Overlay
 	 */
 	private Widget minimapDrawArea()
 	{
-		final int[] candidates = {
-			InterfaceID.Toplevel.MINIMAP,
-			InterfaceID.ToplevelOsrsStretch.MINIMAP,
-			InterfaceID.ToplevelPreEoc.MINIMAP,
-		};
-		for (int id : candidates)
+		// The *draw area* first, then the container. MINIMAP is the whole
+		// furniture -- compass, orbs and stone border -- so taking its radius
+		// put the rim arrow a long way outside the circle the player can see.
+		// MAPCONTAINER and MAP_MINIMAP are the map itself.
+		for (int id : MINIMAP_WIDGETS)
 		{
 			final Widget widget = client.getWidget(id);
 			if (widget != null && !widget.isHidden())
@@ -227,6 +271,23 @@ public class MinimapOverlay extends Overlay
 
 	private WorldPoint firstPoint(Target target)
 	{
+		// What the quest is waiting on beats what the step names: on a quest
+		// step the guide says "continue Rune Mysteries" and Quest Helper says
+		// where.
+		final QuestHelperSteps.Instruction instruction = tracker.getInstruction();
+		if (instruction != null)
+		{
+			final List<Integer> at = instruction.getPoint();
+			if (at.size() >= 3)
+			{
+				return new WorldPoint(at.get(0), at.get(1), at.get(2));
+			}
+		}
+
+		if (target == null)
+		{
+			return null;
+		}
 		for (List<Integer> raw : target.getPoints())
 		{
 			if (raw != null && raw.size() >= 3)
