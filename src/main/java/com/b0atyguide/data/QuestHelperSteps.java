@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2026, Previn <https://github.com/previns>
+ * Copyright (c) 2020, Zoinkwiz and Twinkle (cyclic-widget solver)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -82,14 +83,17 @@ public class QuestHelperSteps
 		private List<List<Integer>> tiles;
 		private Integer panel;
 		private List<WidgetMark> widgets;
+		private List<WidgetPuzzle> widgetPuzzles;
 		private List<Integer> ids;
 		private String text;
 		private boolean conditional;
 		private int branches;
 		private List<Need> items;
-		private int icon;
+		private Integer icon;
 		private boolean spread;
 		private List<String> dialogue;
+		private List<DialogueRule> dialogueRules;
+		private List<Choice> choices;
 		private Requirement when;
 		private List<Instruction> whenIn;
 
@@ -124,6 +128,47 @@ public class QuestHelperSteps
 			return dialogue == null ? Collections.emptyList() : dialogue;
 		}
 
+		public List<DialogueRule> getDialogueRules()
+		{
+			return dialogueRules == null ? Collections.emptyList() : dialogueRules;
+		}
+
+		/**
+		 * Options Quest Helper relabels to say where they lead.
+		 *
+		 * <p>"I'll help you. (side with Hazeel)" against "I won't help you.
+		 * (side with Ceril)": both are on screen at once and they take the
+		 * quest in opposite directions, so the words alone cannot say which one
+		 * this route wants. The build reads the guide's own bracket -- "Start
+		 * Hazeel Cult [Side with Hazeel]" -- and puts the matching options into
+		 * {@link #getDialogue()}, which is what the highlighter looks at.
+		 *
+		 * <p>Kept here as well so the losing option is still explainable rather
+		 * than merely absent.
+		 */
+		public List<Choice> getChoices()
+		{
+			return choices == null ? Collections.emptyList() : choices;
+		}
+
+		/** One relabelled option, and what Quest Helper says choosing it means. */
+		public static class Choice
+		{
+			private String option;
+			private String note;
+
+			public String getOption()
+			{
+				return option == null ? "" : option;
+			}
+
+			/** "side with Hazeel", as written on the option. */
+			public String getNote()
+			{
+				return note == null ? "" : note;
+			}
+		}
+
 		/**
 		 * An item to draw over the thing this step names, or 0.
 		 *
@@ -133,7 +178,13 @@ public class QuestHelperSteps
 		 */
 		public int getIcon()
 		{
-			return icon;
+			return icon == null ? 0 : icon;
+		}
+
+		/** Zero is Dwarf remains, not an absent icon. */
+		public boolean hasIcon()
+		{
+			return icon != null && icon >= 0;
 		}
 
 		/**
@@ -164,6 +215,28 @@ public class QuestHelperSteps
 		public Instruction now(WorldPoint at, Map<Integer, Integer> held, Vars vars)
 		{
 			return now(at, held, vars, 0);
+		}
+
+		/** A hint below an unreadable branch is not evidence of quest progress. */
+		public Integer confirmedPanel(WorldPoint at, Map<Integer, Integer> held, Vars vars)
+		{
+			return confirmedPanel(at, held, vars, 0);
+		}
+
+		private Integer confirmedPanel(WorldPoint at, Map<Integer, Integer> held, Vars vars, int depth)
+		{
+			if (depth > MAX_NESTING) { return null; }
+			for (Instruction branch : getWhenIn())
+			{
+				if (branch.when != null && branch.when.holds(at, held, vars))
+				{
+					// Keep uncertainty from ANY ancestor, even when its nested
+					// child looks unconditional in isolation. Display can still
+					// offer that hint; automatic completion cannot trust it.
+					return branch.conditional ? null : branch.confirmedPanel(at, held, vars, depth + 1);
+				}
+			}
+			return conditional ? null : panel;
 		}
 
 		/**
@@ -235,6 +308,11 @@ public class QuestHelperSteps
 		public List<WidgetMark> getWidgets()
 		{
 			return widgets == null ? Collections.emptyList() : widgets;
+		}
+
+		public List<WidgetPuzzle> getWidgetPuzzles()
+		{
+			return widgetPuzzles == null ? Collections.emptyList() : widgetPuzzles;
 		}
 
 		/**
@@ -498,11 +576,11 @@ public class QuestHelperSteps
 			}
 			if (item != null)
 			{
-				int carried = 0;
+				long carried = 0;
 				for (Integer id : item.getIds())
 				{
 					final Integer some = held == null ? null : held.get(id);
-					carried += some == null ? 0 : some;
+					carried += some == null ? 0 : Math.max(0, some);
 				}
 				return carried >= item.getCount();
 			}
@@ -523,14 +601,86 @@ public class QuestHelperSteps
 		}
 	}
 
-	/**
-	 * One part of an interface Quest Helper marks.
-	 *
-	 * <p>Its {@code WidgetHighlight}, kept whole: an interface to look in,
-	 * optionally one child inside it, whether to search the children, and up to
-	 * four filters. The filters are applied in Quest Helper's own order, and all
-	 * of them must pass.
-	 */
+	/** QH suppresses a fallback if any visible row contains a source exclusion. */
+	public static class DialogueRule
+	{
+		private String text;
+		private List<String> unless;
+
+		public String getText() { return text; }
+
+		public boolean allowed(List<String> visible)
+		{
+			if (text == null || text.isEmpty() || unless == null || unless.isEmpty())
+			{
+				return false;
+			}
+			for (String exclusion : unless)
+			{
+				if (exclusion == null || exclusion.isEmpty()) { return false; }
+				for (String row : visible)
+				{
+					if (row != null && row.contains(exclusion)) { return false; }
+				}
+			}
+			return true;
+		}
+	}
+
+	/** Independent cyclic controls, with targets and IDs supplied by extracted data. */
+	public static class WidgetPuzzle
+	{
+		private List<WidgetCycle> cycles;
+		private int submit;
+
+		public List<WidgetCycle> getCycles()
+		{
+			return cycles == null ? Collections.emptyList() : cycles;
+		}
+
+		public int getSubmit()
+		{
+			return submit;
+		}
+	}
+
+	public static class WidgetCycle
+	{
+		private int varbit;
+		private int target;
+		private int size;
+		private int left;
+		private int right;
+
+		public int getVarbit() { return varbit; }
+		public int getLeft() { return left; }
+		public int getRight() { return right; }
+
+		/** -1 means invalid data/state; zero means solved, otherwise a widget ID. */
+		public int button(int current)
+		{
+			if (size < 2 || size > 128 || target < 1 || target > size
+				|| current < 0 || current > size || varbit < 0 || left <= 0 || right <= 0)
+			{
+				return -1;
+			}
+			if (current == target)
+			{
+				return 0;
+			}
+			// QH's cyclic solver chooses right on equal distances.
+			return Math.floorMod(current - target, size) < Math.floorMod(target - current, size)
+				? left : right;
+		}
+
+		public int distance(int current)
+		{
+			return button(current) < 0 ? -1 : Math.min(Math.floorMod(current - target, size),
+				Math.floorMod(target - current, size));
+		}
+	}
+
+	/** A WidgetHighlight's component, child selection and filters. */
 	public static class WidgetMark
 	{
 		/**

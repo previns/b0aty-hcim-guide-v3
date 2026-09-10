@@ -46,7 +46,6 @@ import net.runelite.api.events.ItemDespawned;
 import net.runelite.api.Item;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.ItemContainer;
-import javax.swing.SwingUtilities;
 import com.b0atyguide.data.Step;
 import com.b0atyguide.data.Tag;
 import com.b0atyguide.overlay.ApproachTracker;
@@ -59,6 +58,7 @@ import com.b0atyguide.overlay.MinimapOverlay;
 import com.b0atyguide.overlay.PathOverlay;
 import com.b0atyguide.overlay.GuideIcon;
 import com.b0atyguide.overlay.SceneTracker;
+import com.b0atyguide.overlay.SearchedObjects;
 import com.b0atyguide.overlay.SpellOverlay;
 import com.b0atyguide.overlay.WorldMapMarker;
 import com.b0atyguide.path.PathTracker;
@@ -72,11 +72,14 @@ import com.google.gson.Gson;
 import com.google.inject.Provides;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.TileObject;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.GameState;
 import net.runelite.api.Quest;
 import net.runelite.api.QuestState;
@@ -88,6 +91,7 @@ import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.GroundObjectDespawned;
 import net.runelite.api.events.GroundObjectSpawned;
@@ -101,6 +105,8 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.ProfileChanged;
+import javax.swing.SwingUtilities;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -170,6 +176,9 @@ public class B0atyGuidePlugin extends Plugin
 	private SceneTracker sceneTracker;
 
 	@Inject
+	private SearchedObjects searchedObjects;
+
+	@Inject
 	private MinimapOverlay minimapOverlay;
 
 	@Inject
@@ -209,6 +218,7 @@ public class B0atyGuidePlugin extends Plugin
 
 	/** The Quest Helper instruction the trackers were last pointed at. */
 	private QuestHelperSteps.Instruction lastInstruction;
+	private Integer resolvedPanel;
 
 	/**
 	 * Where the player was standing as of the last tick.
@@ -263,7 +273,9 @@ public class B0atyGuidePlugin extends Plugin
 	private GuidePanel panel;
 	private NavigationButton navButton;
 	private Guide guide;
-	private Progress progress = new Progress();
+	private volatile Progress progress = new Progress();
+	private volatile String progressProfile;
+	private volatile boolean progressReady;
 
 	/**
 	 * A varbit changed, so a quest may have completed -- but the check has to
@@ -330,6 +342,11 @@ public class B0atyGuidePlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
+		progressReady = false;
+		currentStep = null;
+		lastInstruction = null;
+		playerAt = null;
+		questCheckPending = false;
 		// startUp() can fail part way -- a bad guide.json throws before the nav
 		// button exists -- and RuneLite calls shutDown() regardless. Removing a
 		// null navigation throws inside ClientUI on the EDT, which surfaces as
@@ -360,12 +377,46 @@ public class B0atyGuidePlugin extends Plugin
 	// --- progress ----------------------------------------------------------
 
 	/**
-	 * Progress is stored per RuneLite profile, so an alt keeps its own ticks
-	 * without the plugin needing the account hash before login.
+	 * Progress belongs to RuneLite's RuneScape-account key, not its UI profile.
+	 * Before login no account is selected and progress edits are disabled.
 	 */
-	private void loadProgress()
+	private synchronized void loadProgress()
 	{
-		progress = new Progress(parseIds(config.progress()), parseIds(config.manualProgress()));
+		String account = client.getGameState() == GameState.LOGGED_IN ? configManager.getRSProfileKey() : null;
+		// A hop/reconnect or UI-profile change is not an account change. Keep
+		// the same progress object so the sidebar need not rebuild or lose its
+		// scroll position. A genuinely different account still loads its save.
+		if (account != null && account.equals(progressProfile))
+		{
+			progressReady = true;
+			return;
+		}
+		progressProfile = account;
+		progressReady = progressProfile != null;
+		if (!progressReady)
+		{
+			progress = new Progress(Collections.emptySet(), Collections.emptySet());
+			return;
+		}
+		String stored = configManager.getConfiguration(B0atyGuideConfig.GROUP, progressProfile, PROGRESS_KEY);
+		String manual = configManager.getConfiguration(B0atyGuideConfig.GROUP, progressProfile, MANUAL_KEY);
+		// A legacy save has no account identity. The author's migration policy is
+		// first logged-in account only; never seed every alt from the same save.
+		String claimed = configManager.getConfiguration(B0atyGuideConfig.GROUP, "legacyProgressAccount");
+		if (shouldImportLegacy(stored, manual, claimed))
+		{
+			stored = config.progress();
+			manual = config.manualProgress();
+			configManager.setConfiguration(B0atyGuideConfig.GROUP, progressProfile, PROGRESS_KEY,
+				stored == null ? "" : stored);
+			configManager.setConfiguration(B0atyGuideConfig.GROUP, progressProfile, MANUAL_KEY,
+				manual == null ? "" : manual);
+		}
+		if (claimed == null)
+		{
+			configManager.setConfiguration(B0atyGuideConfig.GROUP, "legacyProgressAccount", progressProfile);
+		}
+		progress = new Progress(parseIds(stored), parseIds(manual));
 
 		final int migrated = progress.applyMigrations(guide.getMigrations());
 		final int pruned = progress.prune(guide);
@@ -374,6 +425,12 @@ public class B0atyGuidePlugin extends Plugin
 			log.debug("progress: {} step(s) migrated, {} dropped", migrated, pruned);
 			saveProgress();
 		}
+	}
+
+	static boolean shouldImportLegacy(String stored, String manual, String claimed)
+	{
+		// Empty strings are intentional saved progress, not a missing save.
+		return stored == null && manual == null && claimed == null;
 	}
 
 	private static Set<String> parseIds(String stored)
@@ -387,12 +444,19 @@ public class B0atyGuidePlugin extends Plugin
 		return ids;
 	}
 
-	private void saveProgress()
+	private synchronized void saveProgress()
 	{
+		// Account key is stable across routine config saves. Explicitly address
+		// the captured account in both writes; never use a changing ambient key.
+		if (!progressReady || progressProfile == null
+			|| !progressProfile.equals(configManager.getRSProfileKey()))
+		{
+			return;
+		}
 		configManager.setConfiguration(
-			B0atyGuideConfig.GROUP, PROGRESS_KEY, String.join(",", progress.completedIds()));
+			B0atyGuideConfig.GROUP, progressProfile, PROGRESS_KEY, String.join(",", progress.completedIds()));
 		configManager.setConfiguration(
-			B0atyGuideConfig.GROUP, MANUAL_KEY, String.join(",", progress.manualIds()));
+			B0atyGuideConfig.GROUP, progressProfile, MANUAL_KEY, String.join(",", progress.manualIds()));
 	}
 
 	/**
@@ -401,8 +465,9 @@ public class B0atyGuidePlugin extends Plugin
 	 * <p>Un-ticking keeps the steps the player ticked individually, so pressing
 	 * this by accident never loses work.
 	 */
-	private void onSectionToggled(Section section, boolean complete)
+	private synchronized void onSectionToggled(Section section, boolean complete)
 	{
+		if (!progressReady) { return; }
 		if (progress.setSectionComplete(section, complete))
 		{
 			saveProgress();
@@ -410,8 +475,9 @@ public class B0atyGuidePlugin extends Plugin
 		selectCurrentStep();
 	}
 
-	private void onStepToggled(Step step, boolean complete)
+	private synchronized void onStepToggled(Step step, boolean complete)
 	{
+		if (!progressReady) { return; }
 		progress.setComplete(step.getId(), complete);
 		saveProgress();
 		selectCurrentStep();
@@ -429,25 +495,40 @@ public class B0atyGuidePlugin extends Plugin
 
 	private void onStepSelected(Step step)
 	{
+		if (!progressReady) { return; }
 		currentStep = step;
-		lastInstruction = instructionFor(step);
-		sceneTracker.setStep(step, labelFor(step), lastInstruction);
-		clientThread.invokeLater(() -> groundItems.setStep(step, lastInstruction));
-		worldMapMarker.setStep(step, lastInstruction);
-		pathTracker.clear();
+		final Guide selectedGuide = guide;
+		clientThread.invokeLater(() ->
+		{
+			if (guide == null || guide != selectedGuide || currentStep != step)
+			{
+				return;
+			}
+			lastInstruction = instructionFor(step);
+			sceneTracker.setStep(step, labelFor(step), lastInstruction);
+			groundItems.setStep(step, lastInstruction);
+			worldMapMarker.setStep(step, lastInstruction);
+			pathTracker.clear();
+		});
 	}
 
 	/**
 	 * What Quest Helper says to do on this step right now, or null.
 	 *
-	 * <p>Reads the quest's own progress value, which is a varbit or VarPlayer
-	 * lookup and so safe from anywhere. The instruction changes as the quest
-	 * advances, which is why it is re-read rather than resolved once when the
-	 * step is selected.
+	 * <p>Called on the client thread: branch conditions also inspect widgets and
+	 * the live scene, not only quest vars. Re-read as the quest advances rather
+	 * than resolved only once when a step is selected.
 	 */
 	private QuestHelperSteps.Instruction instructionFor(Step step)
 	{
-		if (step == null || guide == null || !config.showQuestSteps()
+		return config.showQuestSteps() ? resolveInstruction(step) : null;
+	}
+
+	/** Client-thread evaluation, independent of whether guidance is displayed. */
+	private QuestHelperSteps.Instruction resolveInstruction(Step step)
+	{
+		resolvedPanel = null;
+		if (step == null || guide == null
 			|| QuestProgress.explicitGoalSatisfied(guide, step, client::getVarbitValue,
 				client::getVarpValue, withdrawTracker.carried()))
 		{
@@ -492,14 +573,12 @@ public class B0atyGuidePlugin extends Plugin
 		// zone, an item, or both. Downstairs it is "climb the ladder"; upstairs
 		// it is the cat the milk is for; and with the kitten in hand it is
 		// "return the kitten to Gertrude's cat".
-		// Reading a var is an array lookup, so this is safe from Swing's thread
-		// as well as the client's -- the same reason the quest's own progress
-		// value is read here rather than deferred.
+		// This now also reads live scene objects and widgets. Even though a var
+		// lookup is cheap, the complete evaluation belongs on the client thread.
 		// Several branches can ask about scenery. Share one lazy index during
 		// this evaluation only; the next call must see despawns and impostors.
 		final SceneTracker.PresenceCheck presence = sceneTracker.conditionCheck();
-		return instruction.now(playerAt, QuestProgress.guidanceInventory(step, withdrawTracker.carried()),
-			new QuestHelperSteps.Vars()
+		final QuestHelperSteps.Vars vars = new QuestHelperSteps.Vars()
 			{
 				@Override
 				public int varbit(int id)
@@ -526,7 +605,10 @@ public class B0atyGuidePlugin extends Plugin
 					final Widget widget = client.getWidget(id);
 					return widget != null && !widget.isHidden();
 				}
-			});
+			};
+		final Map<Integer, Integer> held = QuestProgress.guidanceInventory(step, withdrawTracker.carried());
+		resolvedPanel = instruction.confirmedPanel(playerAt, held, vars);
+		return instruction.now(playerAt, held, vars);
 	}
 
 	/**
@@ -554,6 +636,9 @@ public class B0atyGuidePlugin extends Plugin
 		worldMapMarker.setStep(current, now);
 		sceneTracker.setStep(current, labelFor(current), now);
 		pathTracker.clear();
+		// A root is only worth remembering while the guide is still asking
+		// about roots.
+		searchedObjects.clear();
 	}
 
 	/** "Bank 12" for the overlay heading, or null when the step is not in a section. */
@@ -565,15 +650,31 @@ public class B0atyGuidePlugin extends Plugin
 
 	private void selectCurrentStep()
 	{
+		if (guide == null || !progressReady)
+		{
+			return;
+		}
 		final Step current = progress.firstIncompleteStep(guide);
 		currentStep = current;
-		lastInstruction = instructionFor(current);
-		sceneTracker.setStep(current, labelFor(current), lastInstruction);
-		clientThread.invokeLater(() -> groundItems.setStep(current, lastInstruction));
-		worldMapMarker.setStep(current, lastInstruction);
+		final Guide selectedGuide = guide;
+		clientThread.invokeLater(() ->
+		{
+			// A later click or shutdown invalidates this queued selection. Keep
+			// the step and its instruction together, never capture a mutable
+			// lastInstruction field for a different step's deferred floor scan.
+			if (guide != selectedGuide || currentStep != current)
+			{
+				return;
+			}
+			lastInstruction = instructionFor(current);
+			sceneTracker.setStep(current, labelFor(current), lastInstruction);
+			groundItems.setStep(current, lastInstruction);
+			worldMapMarker.setStep(current, lastInstruction);
+			pathTracker.clear();
+			searchedObjects.clear();
+		});
 		withdrawTracker.update(guide, current);
 		setupReminder.onBankChanged(progress.sectionOf(guide, current));
-		pathTracker.clear();
 		if (panel != null)
 		{
 			panel.refresh(current);
@@ -659,8 +760,10 @@ public class B0atyGuidePlugin extends Plugin
 		// and all. Re-read rather than taken from lastInstruction: a branch can
 		// turn over between ticks without the step changing, and that turning
 		// over is precisely the event this is watching for.
-		final QuestHelperSteps.Instruction showing = instructionFor(current);
-		final Integer panelNow = showing == null ? null : showing.getPanel();
+		// Hiding the overlay must not discard a fine-grained stopping boundary
+		// and fall back to a coarser quest value that can tick too early.
+		resolveInstruction(current);
+		final Integer panelNow = resolvedPanel;
 		if (questProgress.hasAdvanced(guide, current, client::getVarbitValue,
 			client::getVarpValue, panelNow, withdrawTracker.carried()))
 		{
@@ -754,9 +857,49 @@ public class B0atyGuidePlugin extends Plugin
 	// --- events ------------------------------------------------------------
 
 	@Subscribe
+	public void onProfileChanged(ProfileChanged event)
+	{
+		progressReady = false;
+		clientThread.invokeLater(() ->
+		{
+			if (guide == null) { return; }
+			loadProgress();
+			questProgress.clear();
+			withdrawTracker.clear();
+			lastInstruction = null;
+			final Progress loaded = progress;
+			final GuidePanel shown = panel;
+			SwingUtilities.invokeLater(() ->
+			{
+				if (shown != null && shown == panel && progress == loaded)
+				{
+					shown.setProgress(loaded);
+				}
+			});
+			selectCurrentStep();
+			questCheckPending = true;
+		});
+	}
+
+	@Subscribe
+	public void onRuneScapeProfileChanged(net.runelite.client.events.RuneScapeProfileChanged event)
+	{
+		onProfileChanged(null);
+	}
+
+	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
 		sceneTracker.onGameStateChanged(event);
+		if (event.getGameState() == GameState.LOGIN_SCREEN
+			|| event.getGameState() == GameState.HOPPING)
+		{
+			progressReady = false;
+			currentStep = null;
+			sceneTracker.clear();
+			questProgress.clear();
+			playerAt = null;
+		}
 		if (event.getGameState() == GameState.LOADING
 			|| event.getGameState() == GameState.HOPPING)
 		{
@@ -769,6 +912,7 @@ public class B0atyGuidePlugin extends Plugin
 		}
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
+			onProfileChanged(null);
 			clientThread.invokeLater(() ->
 			{
 				syncQuestCompletion();
@@ -792,6 +936,7 @@ public class B0atyGuidePlugin extends Plugin
 		// tracker where they are really heading.
 		dialogueHighlighter.onTick();
 		refreshQuestInstruction();
+		refreshQuestSideTasks();
 		syncArrived();
 		// Acquiring an explicit quest item need not move a varbit (Waterfall's
 		// book is received before it is read). Check the fresh carried snapshot
@@ -807,6 +952,24 @@ public class B0atyGuidePlugin extends Plugin
 			questCheckPending = false;
 			syncQuestCompletion();
 		}
+	}
+
+	/** Only the current bank is scanned, once per game tick, never per frame. */
+	private void refreshQuestSideTasks()
+	{
+		Step current = currentStep;
+		Section section = guide == null || current == null ? null : progress.sectionOf(guide, current);
+		QuestHelperSteps helper = current == null || guide == null ? null
+			: guide.getQuestHelpers().get(current.getQuestHelper());
+		QuestHelperSteps.Var var = helper == null ? null : helper.getVar();
+		if (!progressReady || section == null || var == null)
+		{
+			currentStepOverlay.setSideTasks(current, Collections.emptyList());
+			return;
+		}
+		int value = var.isVarbit() ? client.getVarbitValue(var.getId()) : client.getVarpValue(var.getId());
+		currentStepOverlay.setSideTasks(current,
+			com.b0atyguide.progress.QuestSideTasks.visible(current, section.getSteps(), value, progress::isComplete));
 	}
 
 	/** A wanted item hit the floor -- the chicken's bones and feather. */
@@ -887,8 +1050,16 @@ public class B0atyGuidePlugin extends Plugin
 			return;
 		}
 
+		final Guide checkedGuide = guide;
+		final Progress checkedProgress = progress;
 		clientThread.invokeLater(() ->
 		{
+			if (guide != checkedGuide || progress != checkedProgress
+				|| !config.autoTickAcquired() || client.getGameState() != GameState.LOGGED_IN
+				|| progress.firstIncompleteStep(guide) != current)
+			{
+				return;
+			}
 			final Map<Integer, Integer> held = new HashMap<>();
 			tally(held, client.getItemContainer(InventoryID.INV));
 			tally(held, client.getItemContainer(InventoryID.WORN));
@@ -900,7 +1071,7 @@ public class B0atyGuidePlugin extends Plugin
 			{
 				progress.setComplete(current.getId(), true);
 				saveProgress();
-				SwingUtilities.invokeLater(this::selectCurrentStep);
+				selectCurrentStep();
 			}
 		});
 	}
@@ -971,6 +1142,45 @@ public class B0atyGuidePlugin extends Plugin
 	{
 		sceneTracker.onGameObjectSpawned(event);
 		pathTracker.onSceneObjectChanged();
+	}
+
+	/**
+	 * Remember which of several identical objects the player has already tried.
+	 *
+	 * <p>So "search the roots until you find the Daconia stone" stops outlining
+	 * a root once it has been searched, and what stays lit is what is left.
+	 *
+	 * <p>Matched by position among the objects already being outlined, rather
+	 * than by object id: the id is the same for every root, and the tile is what
+	 * tells them apart. Only object menu actions count -- walking onto the tile
+	 * is not searching it -- and only while several are outlined, which is what
+	 * keeps a lone dig spot or a lone gate out of this entirely.
+	 */
+	@Subscribe
+	public void onMenuOptionClicked(MenuOptionClicked event)
+	{
+		if (event.getMenuAction() == null
+			|| !event.getMenuAction().name().startsWith("GAME_OBJECT_"))
+		{
+			return;
+		}
+
+		final List<TileObject> outlined = sceneTracker.getObjects();
+		if (outlined.size() < 2)
+		{
+			return;
+		}
+
+		for (TileObject object : outlined)
+		{
+			final LocalPoint at = object.getLocalLocation();
+			if (at != null && at.getSceneX() == event.getParam0()
+				&& at.getSceneY() == event.getParam1())
+			{
+				searchedObjects.searched(object.getWorldLocation());
+				return;
+			}
+		}
 	}
 
 	@Subscribe
@@ -1050,6 +1260,14 @@ public class B0atyGuidePlugin extends Plugin
 		{
 			return;
 		}
+		// Saving ticks emits ConfigChanged twice. They are persistence events,
+		// not navigation: selecting the earliest unchecked step here pulled a
+		// player browsing later banks back up the sidebar on every save.
+		if (PROGRESS_KEY.equals(event.getKey()) || MANUAL_KEY.equals(event.getKey())
+			|| "legacyProgressAccount".equals(event.getKey()))
+		{
+			return;
+		}
 		if ("registerBankTags".equals(event.getKey()))
 		{
 			if (config.registerBankTags())
@@ -1063,7 +1281,7 @@ public class B0atyGuidePlugin extends Plugin
 		}
 		if (panel != null)
 		{
-			panel.refresh(progress.firstIncompleteStep(guide));
+			panel.refresh(currentStep);
 		}
 	}
 }

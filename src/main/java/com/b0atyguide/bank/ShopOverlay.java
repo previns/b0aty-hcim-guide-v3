@@ -120,13 +120,16 @@ public class ShopOverlay extends Overlay
 	 */
 	private Set<Integer> wantedIds()
 	{
-		final Step step = tracker.getStep();
+		return wantedIds(tracker.getStep(), withdrawTracker.carried());
+	}
+
+	static Set<Integer> wantedIds(Step step, Map<Integer, Integer> held)
+	{
 		if (step == null)
 		{
 			return java.util.Collections.emptySet();
 		}
 
-		final Map<Integer, Integer> held = withdrawTracker.carried();
 		final Set<Integer> ids = new HashSet<>();
 		for (ItemRef item : step.getItems())
 		{
@@ -140,7 +143,9 @@ public class ShopOverlay extends Overlay
 		}
 
 		final Target target = step.getTarget();
-		if (target != null && Target.KIND_ITEM.equals(target.getKind()))
+		// The parsed purchase list is authoritative. Re-adding its target here
+		// both rings goods already bought and can add a truncated name's item.
+		if (step.getItems().isEmpty() && target != null && Target.KIND_ITEM.equals(target.getKind()))
 		{
 			ids.addAll(target.getIds());
 		}

@@ -89,15 +89,17 @@ public final class HeldItems
 	 */
 	public static int heldCount(ItemRef item, Map<Integer, Integer> held)
 	{
-		int carried = 0;
+		long carried = 0;
 		for (Integer id : item.getIds())
 		{
 			final Integer some = held.get(id);
 			if (some != null)
 			{
-				carried += some;
+				carried += Math.max(0, some);
 			}
 		}
-		return carried;
+		// Several alternative item stacks can exceed a signed int together.
+		// Saturate the display count rather than wrapping into "missing".
+		return (int) Math.min(Integer.MAX_VALUE, carried);
 	}
 }

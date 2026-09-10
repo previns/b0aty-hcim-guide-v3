@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2026, Previn <https://github.com/previns>
+ * Copyright (c) 2020, Zoinkwiz and Twinkle (cyclic-widget solver)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -102,7 +103,65 @@ public class InterfaceOverlay extends Overlay
 			}
 			mark(graphics, root, mark, 0);
 		}
+		for (QuestHelperSteps.WidgetPuzzle puzzle : instruction.getWidgetPuzzles())
+		{
+			drawPuzzle(graphics, puzzle);
+		}
 		return null;
+	}
+
+	private void drawPuzzle(Graphics2D graphics, QuestHelperSteps.WidgetPuzzle puzzle)
+	{
+		if (puzzle.getCycles().size() < 2 || puzzle.getCycles().size() > 8 || puzzle.getSubmit() <= 0)
+		{
+			return;
+		}
+		Widget submit = client.getWidget(puzzle.getSubmit());
+		if (submit == null || submit.isHidden())
+		{
+			return;
+		}
+		// Require the complete visible interface before drawing any partial hint.
+		for (QuestHelperSteps.WidgetCycle cycle : puzzle.getCycles())
+		{
+			if (cycle.getVarbit() < 0)
+			{
+				return;
+			}
+			Widget left = client.getWidget(cycle.getLeft());
+			Widget right = client.getWidget(cycle.getRight());
+			if (left == null || right == null || left.isHidden() || right.isHidden()
+				|| cycle.button(client.getVarbitValue(cycle.getVarbit())) < 0)
+			{
+				return;
+			}
+		}
+		boolean solved = true;
+		for (QuestHelperSteps.WidgetCycle cycle : puzzle.getCycles())
+		{
+			int current = client.getVarbitValue(cycle.getVarbit());
+			int button = cycle.button(current);
+			if (button == 0)
+			{
+				continue;
+			}
+			solved = false;
+			Widget widget = client.getWidget(button);
+			markLeaf(graphics, widget);
+			Rectangle bounds = widget.getBounds();
+			if (bounds == null || bounds.isEmpty())
+			{
+				continue;
+			}
+			graphics.setColor(config.highlightColor());
+			String count = Integer.toString(cycle.distance(current));
+			graphics.drawString(count, bounds.x + (bounds.width - graphics.getFontMetrics().stringWidth(count)) / 2,
+				bounds.y + (bounds.height + graphics.getFontMetrics().getAscent()) / 2);
+		}
+		if (solved)
+		{
+			markLeaf(graphics, submit);
+		}
 	}
 
 	private void mark(Graphics2D graphics, Widget widget,

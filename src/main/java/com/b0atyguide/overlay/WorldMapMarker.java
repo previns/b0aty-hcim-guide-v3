@@ -59,8 +59,6 @@ public class WorldMapMarker
 	@Inject
 	private B0atyGuideConfig config;
 
-	@Inject
-	private SceneTracker tracker;
 
 	/** Thickness of the ring, and the padding that keeps it off the icon. */
 	private static final int RING = 2;
@@ -162,10 +160,7 @@ public class WorldMapMarker
 		// guide's destination is the town the step mentions -- but a step that
 		// names an npc is about that npc, not about wherever the quest happens
 		// to stand.
-		final Target named = step.getTarget();
-		final QuestHelperSteps.Instruction instruction =
-			named != null && !named.getIds().isEmpty() && !step.isQuestFollow()
-				? null : (chosen != null ? chosen : tracker.getInstruction());
+		final QuestHelperSteps.Instruction instruction = step.navigationInstruction(chosen);
 		if (instruction != null)
 		{
 			final List<WorldPoint> exact =
@@ -195,7 +190,16 @@ public class WorldMapMarker
 			return fromTarget;
 		}
 
-		return Collections.emptyList();
+		// Last, and only into silence: where the item lies on the ground. A step
+		// that already knows where it is going has been answered above, so this
+		// never argues with the guide -- it answers "Collect 2x Purple Dye when
+		// passing", which named an item, a quantity, and no place at all.
+		final List<List<Integer>> lying = new ArrayList<>();
+		for (Step.Spawn spawn : step.getSpawns())
+		{
+			lying.addAll(spawn.getPoints());
+		}
+		return all(lying);
 	}
 
 	/**

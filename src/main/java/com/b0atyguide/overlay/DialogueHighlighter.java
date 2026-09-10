@@ -28,9 +28,11 @@ import com.b0atyguide.B0atyGuideConfig;
 import com.b0atyguide.data.QuestHelperSteps;
 import com.b0atyguide.data.Step;
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.JavaScriptCallback;
@@ -56,6 +58,7 @@ import net.runelite.api.widgets.Widget;
  * anywhere else is not allowed.
  */
 @Singleton
+@Slf4j
 public class DialogueHighlighter
 {
 	/**
@@ -79,6 +82,7 @@ public class DialogueHighlighter
 
 	/** The step the count belongs to; a different one starts over. */
 	private String countingFor;
+	private String lastMenuDiagnostic;
 
 	@Inject
 	DialogueHighlighter(Client client, B0atyGuideConfig config, SceneTracker tracker)
@@ -95,6 +99,7 @@ public class DialogueHighlighter
 		final boolean open = options != null && !options.isHidden();
 		if (!open)
 		{
+			lastMenuDiagnostic = null;
 			if (shutFor < TICKS_UNTIL_OVER)
 			{
 				shutFor++;
@@ -114,14 +119,26 @@ public class DialogueHighlighter
 		// conversation, and it is 2,789 options across the quests and diaries
 		// this guide touches.
 		final QuestHelperSteps.Instruction instruction = tracker.getInstruction();
-		final List<String> said =
+		List<String> said =
 			instruction == null ? Collections.emptyList() : instruction.getDialogue();
-		if (!said.isEmpty())
+		if (instruction != null && !instruction.getDialogueRules().isEmpty())
+		{
+			List<String> visible = new ArrayList<>();
+			visibleTexts(options.getChildren(), visible);
+			visibleTexts(options.getNestedChildren(), visible);
+			said = new ArrayList<>(said);
+			for (QuestHelperSteps.DialogueRule rule : instruction.getDialogueRules())
+			{
+				if (rule.allowed(visible)) { said.add(rule.getText()); }
+			}
+		}
+		if (!said.isEmpty() || (instruction != null && !instruction.getDialogueRules().isEmpty()))
 		{
 			// Never both. The counter below has to be right about every answer
 			// before it to be right about this one, so a question it did not
 			// see would leave it off by one for the rest of the conversation.
 			shutFor = 0;
+			diagnoseMenu(options, instruction, said);
 			colourMatching(options, said);
 			return;
 		}
@@ -129,6 +146,7 @@ public class DialogueHighlighter
 		final Step step = tracker.getStep();
 		if (step == null || step.getDialogue().isEmpty())
 		{
+			diagnoseMenu(options, instruction, said);
 			shutFor = 0;
 			return;
 		}
@@ -158,7 +176,7 @@ public class DialogueHighlighter
 			return;
 		}
 
-		final Widget[] rows = options.getDynamicChildren();
+		final Widget[] rows = options.getChildren();
 		if (rows == null || due < 0 || due >= rows.length)
 		{
 			return;
@@ -200,9 +218,9 @@ public class DialogueHighlighter
 	{
 		// Quest Helper reads both, and some option boxes put their lines in the
 		// nested set -- checkWidgets is called twice there for that reason.
-		// Read those arrays directly instead of copying them into a list each
-		// tick. Dynamic children must still win when both sets contain a match.
-		if (!colourMatching(options.getDynamicChildren(), said))
+		// Use getChildren, as QH does, not the filtered dynamic-child view.
+		// Direct children win when both sets contain a match.
+		if (!colourMatching(options.getChildren(), said))
 		{
 			colourMatching(options.getNestedChildren(), said);
 		}
@@ -216,7 +234,7 @@ public class DialogueHighlighter
 		}
 		for (Widget row : rows)
 		{
-			if (row == null || row.getText() == null)
+			if (row == null || row.isHidden() || row.getText() == null)
 			{
 				continue;
 			}
@@ -233,16 +251,37 @@ public class DialogueHighlighter
 		return false;
 	}
 
-	/**
-	 * An option's text with a leading option number taken off.
-	 *
-	 * <p>Quest Helper, when its numbering is on, rewrites the option it
-	 * highlights to "[2] I'd like to mine in a different area." -- so a player
-	 * running both plugins had this one match on the first tick and miss on
-	 * every tick after, because by then the text was no longer what either
-	 * plugin was looking for. It is also just the right reading: the number is
-	 * not part of what the option says.
-	 */
+	/** Development log only; once per changed NPC menu, never player chat. */
+	private void diagnoseMenu(Widget options, QuestHelperSteps.Instruction instruction, List<String> wanted)
+	{
+		if (!log.isDebugEnabled()) { return; }
+		List<String> visible = new ArrayList<>();
+		visibleTexts(options.getChildren(), visible);
+		visibleTexts(options.getNestedChildren(), visible);
+		Step step = tracker.getStep();
+		String state = "step=" + (step == null ? "none" : step.getId())
+			+ " instruction=" + (instruction == null ? "none" : instruction.getText())
+			+ " wanted=" + wanted + " visible=" + visible;
+		if (!state.equals(lastMenuDiagnostic))
+		{
+			lastMenuDiagnostic = state;
+			log.debug("Dialogue menu {}", state);
+		}
+	}
+
+	private static void visibleTexts(Widget[] rows, List<String> result)
+	{
+		if (rows == null) { return; }
+		for (Widget row : rows)
+		{
+			if (row != null && !row.isHidden() && row.getText() != null)
+			{
+				result.add(unnumbered(row.getText().trim()));
+			}
+		}
+	}
+
+	/** Strip QH's added option number so both plugins can still match its words. */
 	static String unnumbered(String shown)
 	{
 		if (shown.length() < 4 || shown.charAt(0) != '[' || !Character.isDigit(shown.charAt(1)))
@@ -271,5 +310,6 @@ public class DialogueHighlighter
 		answered = 0;
 		shutFor = TICKS_UNTIL_OVER;
 		countingFor = null;
+		lastMenuDiagnostic = null;
 	}
 }

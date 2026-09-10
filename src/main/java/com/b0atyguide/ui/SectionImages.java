@@ -29,6 +29,10 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -90,16 +94,39 @@ public class SectionImages
 	private final Map<String, Boolean> failed = new LinkedHashMap<>();
 
 	private Function<String, String> expectedHash;
+	private final Map<String, Pending> pending = new LinkedHashMap<>();
+	private long generation;
+
+	private static final class Pending
+	{
+		private final List<Consumer<BufferedImage>> listeners = new ArrayList<>();
+		private Call call;
+	}
 
 	@Inject
 	SectionImages(OkHttpClient httpClient)
 	{
-		this.httpClient = httpClient;
+		// The initial host check does not constrain a redirect's destination.
+		// Refuse redirects instead of letting screenshot hosting contact an
+		// unrelated server through the host application's shared HTTP client.
+		this.httpClient = httpClient.newBuilder()
+			.followRedirects(false).followSslRedirects(false).build();
 	}
 
 	/** Drop the decoded images and the hashes; the plugin is shutting down. */
 	public void clear()
 	{
+		if (!SwingUtilities.isEventDispatchThread())
+		{
+			SwingUtilities.invokeLater(this::clear);
+			return;
+		}
+		generation++;
+		for (Pending request : pending.values())
+		{
+			request.call.cancel();
+		}
+		pending.clear();
 		cache.clear();
 		failed.clear();
 		expectedHash = null;
@@ -110,6 +137,12 @@ public class SectionImages
 	 */
 	public void setExpectedHashes(Function<String, String> hashes)
 	{
+		if (!SwingUtilities.isEventDispatchThread())
+		{
+			SwingUtilities.invokeLater(() -> setExpectedHashes(hashes));
+			return;
+		}
+		clear();
 		this.expectedHash = hashes;
 	}
 
@@ -119,24 +152,46 @@ public class SectionImages
 	 */
 	public void get(String url, Consumer<BufferedImage> onLoaded)
 	{
+		if (!SwingUtilities.isEventDispatchThread())
+		{
+			SwingUtilities.invokeLater(() -> get(url, onLoaded));
+			return;
+		}
+		// Reject unknown links BEFORE making a request, not after downloading.
+		final String hash = expectedHash == null ? null : expectedHash.apply(url);
+		if (hash == null || !isAllowed(url))
+		{
+			return;
+		}
 		final BufferedImage cached = cache.get(url);
 		if (cached != null)
 		{
 			onLoaded.accept(cached);
 			return;
 		}
-		if (failed.containsKey(url) || !isAllowed(url))
+		if (failed.containsKey(url))
 		{
 			return;
 		}
 
-		httpClient.newCall(new Request.Builder().url(url).build()).enqueue(new Callback()
+		Pending existing = pending.get(url);
+		if (existing != null)
+		{
+			existing.listeners.add(onLoaded);
+			return;
+		}
+		final long requestedGeneration = generation;
+		final Pending request = new Pending();
+		request.listeners.add(onLoaded);
+		request.call = httpClient.newCall(new Request.Builder().url(url).build());
+		pending.put(url, request);
+		request.call.enqueue(new Callback()
 		{
 			@Override
 			public void onFailure(Call call, IOException e)
 			{
 				log.debug("could not fetch {}", url, e);
-				SwingUtilities.invokeLater(() -> failed.put(url, Boolean.TRUE));
+				complete(null);
 			}
 
 			@Override
@@ -148,10 +203,10 @@ public class SectionImages
 					if (closing.isSuccessful() && closing.body() != null
 						&& closing.body().contentLength() <= MAX_BYTES)
 					{
-						final byte[] body = closing.body().bytes();
+						final byte[] body = readBounded(closing.body().byteStream(), MAX_BYTES);
 						// Hashed before it is decoded, so bytes that do not
 						// match are never handed to the image decoder at all.
-						if (matchesExpectedHash(url, body))
+						if (matchesExpectedHash(url, hash, body))
 						{
 							image = ImageIO.read(new ByteArrayInputStream(body));
 						}
@@ -163,16 +218,30 @@ public class SectionImages
 					log.debug("could not decode {}", url, e);
 				}
 
-				final BufferedImage loaded = image;
+				complete(image);
+			}
+
+			private void complete(BufferedImage loaded)
+			{
 				SwingUtilities.invokeLater(() ->
 				{
+					// Cancellation races with responses already delivered. An old
+					// response must never refill the cache or update a closed panel.
+					if (requestedGeneration != generation || pending.get(url) != request)
+					{
+						return;
+					}
+					pending.remove(url);
 					if (loaded == null)
 					{
 						failed.put(url, Boolean.TRUE);
 						return;
 					}
 					cache.put(url, loaded);
-					onLoaded.accept(loaded);
+					for (Consumer<BufferedImage> listener : request.listeners)
+					{
+						listener.accept(loaded);
+					}
 				});
 			}
 		});
@@ -185,9 +254,8 @@ public class SectionImages
 	 * way that happens is a screenshot the build could not reach, and showing
 	 * an unverified picture is the thing this exists to prevent.
 	 */
-	private boolean matchesExpectedHash(String url, byte[] body)
+	private boolean matchesExpectedHash(String url, String expected, byte[] body)
 	{
-		final String expected = expectedHash == null ? null : expectedHash.apply(url);
 		if (expected == null)
 		{
 			log.debug("no recorded hash for {}", url);
@@ -203,6 +271,26 @@ public class SectionImages
 			return false;
 		}
 		return true;
+	}
+
+	/** Content-Length can be absent or dishonest; bound the bytes actually read. */
+	static byte[] readBounded(InputStream input, long limit) throws IOException
+	{
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		byte[] buffer = new byte[8192];
+		long total = 0;
+		int count;
+		while ((count = input.read(buffer, 0,
+			(int) Math.min(buffer.length, limit - total + 1))) != -1)
+		{
+			total += count;
+			if (total > limit)
+			{
+				throw new IOException("Screenshot exceeds download limit");
+			}
+			output.write(buffer, 0, count);
+		}
+		return output.toByteArray();
 	}
 
 	private static String sha256(byte[] body)
@@ -234,7 +322,7 @@ public class SectionImages
 	 */
 	public static boolean isAllowed(String url)
 	{
-		final HttpUrl parsed = HttpUrl.parse(url);
+		final HttpUrl parsed = url == null ? null : HttpUrl.parse(url);
 		return parsed != null
 			&& "https".equals(parsed.scheme())
 			&& ALLOWED_HOST.equals(parsed.host());

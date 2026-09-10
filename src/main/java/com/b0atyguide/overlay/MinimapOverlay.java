@@ -126,14 +126,19 @@ public class MinimapOverlay extends Overlay
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		if (!config.showMinimapArrow() || !tracker.isTracking())
+		if (!config.showMinimapArrow())
 		{
 			return null;
 		}
 
 		final Step step = tracker.getStep();
+		if (step == null)
+		{
+			return null;
+		}
 		final Target target = step == null ? null : step.getTarget();
-		if (target == null || (!target.isWikiBacked() && !config.highlightUnconfirmed()))
+		if (tracker.getNavigationInstruction() == null && target != null
+			&& !target.isWikiBacked() && !config.highlightUnconfirmed())
 		{
 			return null;
 		}
@@ -274,7 +279,7 @@ public class MinimapOverlay extends Overlay
 		// What the quest is waiting on beats what the step names: on a quest
 		// step the guide says "continue Rune Mysteries" and Quest Helper says
 		// where.
-		final QuestHelperSteps.Instruction instruction = tracker.getInstruction();
+		final QuestHelperSteps.Instruction instruction = tracker.getNavigationInstruction();
 		if (instruction != null)
 		{
 			final List<Integer> at = instruction.getPoint();
@@ -284,7 +289,7 @@ public class MinimapOverlay extends Overlay
 			}
 		}
 
-		if (target == null)
+		if (target == null || target.isScattered())
 		{
 			return null;
 		}
@@ -326,13 +331,9 @@ public class MinimapOverlay extends Overlay
 		}
 
 		final WorldView view = client.getTopLevelWorldView();
-		for (List<Integer> raw : target.getPoints())
+		final WorldPoint world = firstPoint(target);
+		if (view != null && world != null && world.getPlane() == view.getPlane())
 		{
-			if (raw == null || raw.size() < 3 || raw.get(2) != view.getPlane())
-			{
-				continue;
-			}
-			final WorldPoint world = new WorldPoint(raw.get(0), raw.get(1), raw.get(2));
 			final LocalPoint local = LocalPoint.fromWorld(view, world);
 			if (local != null)
 			{

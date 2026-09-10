@@ -24,7 +24,9 @@
  */
 package com.b0atyguide.data;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -174,6 +176,46 @@ public class Guide
 	public List<Section> getSections()
 	{
 		return sections == null ? Collections.emptyList() : sections;
+	}
+
+	/**
+	 * Fold each continuation section into the bank it continues.
+	 *
+	 * <p>Six banks arrive as two sections because the wiki puts something
+	 * between their halves -- a linked video, usually. The build says so with
+	 * {@code continuationOf}, but nothing read it, so Bank 25 appeared twice in
+	 * the sidebar and stepping from one half to the other announced a new bank
+	 * and re-read the withdraw list.
+	 *
+	 * <p>Run once at load. A continuation whose parent cannot be found is kept
+	 * as its own section rather than dropped: showing a bank twice is a blemish,
+	 * losing one is a player following a guide with a hole in it.
+	 */
+	void foldContinuations()
+	{
+		if (sections == null)
+		{
+			return;
+		}
+
+		// Maps every section id -- including a folded one -- to the section it
+		// now lives in, so a bank split three ways still lands in one place.
+		final Map<String, Section> host = new HashMap<>();
+		final List<Section> kept = new ArrayList<>(sections.size());
+		for (Section section : sections)
+		{
+			final Section into = section.isContinuation()
+				? host.get(section.getContinuationOf()) : null;
+			if (into != null)
+			{
+				into.absorb(section);
+				host.put(section.getId(), into);
+				continue;
+			}
+			host.put(section.getId(), section);
+			kept.add(section);
+		}
+		sections = kept;
 	}
 
 	public List<String> getPreamble()

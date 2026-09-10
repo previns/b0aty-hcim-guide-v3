@@ -24,6 +24,7 @@
  */
 package com.b0atyguide.data;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -89,6 +90,40 @@ public class Section
 	public boolean isContinuation()
 	{
 		return continuationOf != null;
+	}
+
+	/**
+	 * Take another section's steps and pictures as the rest of this bank.
+	 *
+	 * <p>The wiki splits a bank in two when something sits between the halves --
+	 * a linked video, usually -- and the build records that faithfully, with the
+	 * second half pointing back through {@code continuationOf}. Nothing read it,
+	 * so six banks appeared twice in the sidebar, and crossing from one half to
+	 * the other looked like arriving at a new bank.
+	 *
+	 * <p>Merged here rather than in the pipeline on purpose. A step's id is
+	 * derived from its section's slug, so merging upstream would rewrite the ids
+	 * of all 31 steps in those second halves -- and the migration map is built
+	 * per slug, so a slug that stops existing produces no migrations at all.
+	 * Every one of those steps would have come back unticked.
+	 */
+	void absorb(Section rest)
+	{
+		final List<Step> mine = new ArrayList<>(getSteps());
+		int position = mine.isEmpty() ? 0 : mine.get(mine.size() - 1).getOrdinal() + 1;
+		for (Step step : rest.getSteps())
+		{
+			step.renumber(position++);
+			mine.add(step);
+		}
+		steps = mine;
+
+		if (!rest.getImageUrls().isEmpty())
+		{
+			final List<String> pictures = new ArrayList<>(getImageUrls());
+			pictures.addAll(rest.getImageUrls());
+			imageUrls = pictures;
+		}
 	}
 
 	public List<String> getImageUrls()

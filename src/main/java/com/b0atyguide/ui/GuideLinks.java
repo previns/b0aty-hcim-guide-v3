@@ -75,7 +75,7 @@ public final class GuideLinks
 	 */
 	public static boolean isAllowed(String url)
 	{
-		final HttpUrl parsed = HttpUrl.parse(url);
+		final HttpUrl parsed = url == null ? null : HttpUrl.parse(url);
 		if (parsed == null || !"https".equals(parsed.scheme()))
 		{
 			return false;

@@ -101,6 +101,9 @@ public class SceneTracker
 	@Inject
 	private ClientThread clientThread;
 
+	@Inject
+	private SearchedObjects searched;
+
 	private final List<NPC> npcs = new ArrayList<>();
 	private final List<TileObject> objects = new ArrayList<>();
 
@@ -140,6 +143,7 @@ public class SceneTracker
 	 * subject of a page. Only the first can be held to.
 	 */
 	private boolean exactly;
+	private Step.Travel activeTravel;
 
 	/**
 	 * Point the tracker at a step. Cheap enough to call on every panel
@@ -204,14 +208,17 @@ public class SceneTracker
 		this.step = step;
 		this.sectionLabel = sectionLabel;
 		this.instruction = instruction;
+		activeTravel = null;
+		instruction = getNavigationInstruction();
 
 		final Target target = step == null ? null : step.getTarget();
 		final boolean usable = target != null && target.isHighlightable();
 		final boolean hasInstruction = instruction != null && !instruction.getIds().isEmpty();
 		final List<Step.Seller> sellers = step == null
 			? Collections.emptyList() : step.getSellers();
+		final Step.Travel travel = step == null ? null : step.getTravel();
 
-		if (!usable && !hasInstruction && sellers.isEmpty())
+		if (!usable && !hasInstruction && sellers.isEmpty() && travel == null)
 		{
 			// Keep the step. Most steps have nothing to outline, and the current
 			// step still has to be readable on the step overlay -- forgetting it
@@ -265,6 +272,25 @@ public class SceneTracker
 			// A name the wiki maps in several places is several places, not one.
 			spread = usable && target.getPoints().size() > 1;
 			exactly = false;
+
+			// "Take the boat to Rimmington" names a place and nothing else. The
+			// transport table knows who sails there, so outline them.
+			//
+			// Asked of npcs *and* objects, because the id spaces overlap and the
+			// build refuses to guess which one a transport id is -- 7789 is
+			// Holgart and also a calquat tree. Only one of them is at the dock.
+			if (!usable && travel != null)
+			{
+				source = "the way there";
+				activeTravel = travel;
+				wantedIds = new HashSet<>(travel.getIds());
+				wantNpc = true;
+				wantObject = true;
+				// Several docks sail to the same island; the nearest is the one
+				// the player is standing at.
+				wantedAt = points(travel.getOrigins());
+				spread = travel.getOrigins().size() > 1;
+			}
 		}
 
 		// Whoever sells what the step says to buy. Every shop that stocks it,
@@ -301,6 +327,12 @@ public class SceneTracker
 	public QuestHelperSteps.Instruction getInstruction()
 	{
 		return instruction;
+	}
+
+	/** The navigation subset; the full instruction remains available to dialogue. */
+	public QuestHelperSteps.Instruction getNavigationInstruction()
+	{
+		return step == null ? null : step.navigationInstruction(instruction);
 	}
 
 	public void clear()
@@ -359,9 +391,41 @@ public class SceneTracker
 		return npcs;
 	}
 
+	/**
+	 * The matches worth outlining, minus the ones already tried.
+	 *
+	 * <p>Only ever narrows while several are on screen -- one match is never
+	 * dimmed, so a single dig spot or a single gate is untouched by this. And
+	 * if every match has been tried, the memory is wrong rather than the player:
+	 * it is cleared and all of them come back.
+	 *
+	 * <p>Returns the list itself when nothing has been tried, which is almost
+	 * always, so the common path allocates nothing on a render pass.
+	 */
 	public List<TileObject> getObjects()
 	{
-		return objects;
+		// Null when a test constructs this directly, as several do -- the same
+		// allowance the client thread gets above.
+		if (searched == null || searched.isEmpty() || objects.size() < 2)
+		{
+			return objects;
+		}
+
+		final List<TileObject> left = new ArrayList<>(objects.size());
+		for (TileObject object : objects)
+		{
+			if (!searched.isSearched(object.getWorldLocation()))
+			{
+				left.add(object);
+			}
+		}
+
+		if (left.isEmpty())
+		{
+			searched.clear();
+			return objects;
+		}
+		return left;
 	}
 
 	// --- what it decided, for the diagnostic ---------------------------------
@@ -422,6 +486,12 @@ public class SceneTracker
 		{
 			return false;
 		}
+		if (activeTravel != null)
+		{
+			NPCComposition composition = npc.getTransformedComposition();
+			return activeTravel.matchesDeparture(npc.getId(), realPointOf(npc), ROAM - 1)
+				|| (composition != null && activeTravel.matchesDeparture(composition.getId(), realPointOf(npc), ROAM - 1));
+		}
 		if (!wantedIds.isEmpty() && wantedIds.contains(npc.getId()))
 		{
 			return true;
@@ -447,6 +517,12 @@ public class SceneTracker
 		if (!wantObject)
 		{
 			return false;
+		}
+		if (activeTravel != null)
+		{
+			ObjectComposition composition = SceneObjects.definitionOf(client, object);
+			return activeTravel.matchesDeparture(object.getId(), realPointOf(object), 3)
+				|| (composition != null && activeTravel.matchesDeparture(composition.getId(), realPointOf(object), 3));
 		}
 		if (!wantedIds.isEmpty() && wantedIds.contains(object.getId()))
 		{

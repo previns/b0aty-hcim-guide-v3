@@ -64,7 +64,7 @@ final class ItemHighlightTargets
 		// Keep the icon check exactly as before, including item zero: it is
 		// a real item ID, not an empty inventory slot.
 		return selected != null
-			&& (selected.getIcon() == itemId || questIds.contains(itemId));
+			&& ((selected.hasIcon() && selected.getIcon() == itemId) || questIds.contains(itemId));
 	}
 
 	boolean isStepItem(Step selected, int itemId)

@@ -108,6 +108,9 @@ public class GuideLoader
 		{
 			throw new GuideLoadException("guide.json was empty");
 		}
+		// Before validate, so its duplicate-id check sees the sections the
+		// renderer will actually be handed.
+		guide.foldContinuations();
 		validate(guide);
 		return guide;
 	}

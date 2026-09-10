@@ -103,6 +103,7 @@ public class ApproachTracker
 	/** What the held approach was found for; null means it is not valid. */
 	private String lastStepId;
 	private WorldPoint lastScanFrom;
+	private Object lastInstruction;
 
 	/**
 	 * Where the map keeps its basements, dungeons and caves.
@@ -119,7 +120,7 @@ public class ApproachTracker
 
 	public void clear()
 	{
-		approach = null;
+		onSceneChanged();
 	}
 
 	/**
@@ -135,12 +136,14 @@ public class ApproachTracker
 		final String stepId = step == null ? null : step.getId();
 		final WorldPoint at = RealPoint.of(client, client.getLocalPlayer());
 		if (Objects.equals(stepId, lastStepId)
+			&& tracker.getNavigationInstruction() == lastInstruction
 			&& Objects.equals(at, lastScanFrom))
 		{
 			return;
 		}
 		lastStepId = stepId;
 		lastScanFrom = at;
+		lastInstruction = tracker.getNavigationInstruction();
 
 		rescan();
 	}
@@ -151,6 +154,7 @@ public class ApproachTracker
 		approach = null;
 		lastStepId = null;
 		lastScanFrom = null;
+		lastInstruction = null;
 	}
 
 	private void rescan()
@@ -163,7 +167,7 @@ public class ApproachTracker
 
 		final Step step = tracker.getStep();
 		final Target target = step == null ? null : step.getTarget();
-		if (target == null)
+		if (target == null || target.isScattered() || tracker.getNavigationInstruction() != null)
 		{
 			return;
 		}
@@ -205,10 +209,9 @@ public class ApproachTracker
 		if (known != null)
 		{
 			approach = fromKnown(known, wanted);
-			if (approach != null)
-			{
-				return;
-			}
+			// A known staircase outside the scene is not permission to use a
+			// different building's ladder. Walk towards the target until it loads.
+			return;
 		}
 
 		// A step that names somewhere to walk on this level is answered by
@@ -330,21 +333,32 @@ public class ApproachTracker
 		final Nearest atThatSpot = new Nearest();
 		SceneObjects.forEach(client, object ->
 		{
-			if (known.getIds().contains(object.getId()))
-			{
-				exact.offer(object, 0);
-			}
-			if (at == null)
+			final int distance = knownPointDistance(at, RealPoint.of(client, object.getWorldLocation()));
+			if (distance == Integer.MAX_VALUE)
 			{
 				return;
 			}
-			final int distance = object.getWorldLocation().distanceTo(at);
-			if (distance <= KNOWN_POINT_SLACK && climbs(object, direction))
+			if (known.getIds().contains(object.getId()))
+			{
+				exact.offer(object, distance);
+			}
+			if (climbs(object, direction))
 			{
 				atThatSpot.offer(object, distance);
 			}
 		});
 		return exact.object != null ? exact.object : atThatSpot.object;
+	}
+
+	/** IDs such as LADDER repeat throughout the world; the recorded place must match too. */
+	public static int knownPointDistance(WorldPoint expected, WorldPoint candidate)
+	{
+		if (expected == null || candidate == null)
+		{
+			return Integer.MAX_VALUE;
+		}
+		final int distance = candidate.distanceTo(expected);
+		return distance <= KNOWN_POINT_SLACK ? distance : Integer.MAX_VALUE;
 	}
 
 	/** The closest object offered so far. Mutable so a lambda can fill it in. */

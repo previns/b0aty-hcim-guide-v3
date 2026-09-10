@@ -25,6 +25,7 @@
 package com.b0atyguide.data;
 
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import net.runelite.api.coords.WorldPoint;
 
@@ -85,12 +86,211 @@ public class Step
 			return points == null ? Collections.emptyList() : points;
 		}
 	}
+
+	/**
+	 * Where the step's items lie on the ground, from the wiki's spawn table.
+	 *
+	 * <p>"Collect 2x Purple Dye when passing" never says where. The author wrote
+	 * "when passing" because the spawn is on the way, but the step named no
+	 * place, so the dye only outlined once the player was standing on it -- a
+	 * highlight, not guidance, and 175 acquiring steps had no target at all.
+	 *
+	 * <p>Only for items that lie in a few places. A bucket spawns in forty and
+	 * marking them answers a question nobody asked; the build drops those rather
+	 * than sprinkle the map.
+	 */
+	public List<Spawn> getSpawns()
+	{
+		return spawns == null ? Collections.emptyList() : spawns;
+	}
+
+	/** One item, the ids to outline, and every tile the wiki puts it on. */
+	public static class Spawn
+	{
+		private String name;
+		private List<Integer> ids;
+		private List<List<Integer>> points;
+		private List<String> places;
+
+		public String getName()
+		{
+			return name == null ? "" : name;
+		}
+
+		public List<Integer> getIds()
+		{
+			return ids == null ? Collections.emptyList() : ids;
+		}
+
+		public List<List<Integer>> getPoints()
+		{
+			return points == null ? Collections.emptyList() : points;
+		}
+
+		/** Readable locations, in the same order as {@link #getPoints()}. */
+		public List<String> getPlaces()
+		{
+			return places == null ? Collections.emptyList() : places;
+		}
+	}
+
+	private List<Spawn> spawns;
+	private Travel travel;
+
+	/**
+	 * The vehicle a travelling step means, or null.
+	 *
+	 * <p>"Take the boat to Rimmington" never says Captain Barnaby. 98 of the
+	 * guide's 140 travelling steps named a place and nothing else, so the plugin
+	 * walked the player to a dock and went quiet.
+	 *
+	 * <p>Only where the step names a vehicle and the transport table has a route
+	 * of that kind to that place. "Head to Catherby" is a walk, and answering it
+	 * with a boat would be a different instruction.
+	 */
+	public Travel getTravel()
+	{
+		return travel;
+	}
+
+	/** A destination with independently identified departure vehicles. */
+	public static class Travel
+	{
+		private String place;
+		private String kind;
+		private int id;
+		private String action;
+		private List<List<Integer>> origins;
+		private List<Integer> destination;
+		private List<Departure> departures;
+
+		public List<Departure> getDepartures()
+		{
+			if (departures != null) { return departures; }
+			// Compatibility with already-shipped data; new builds retain each ID.
+			List<Departure> legacy = new ArrayList<>();
+			if (origins != null && id > 0)
+			{
+				for (List<Integer> origin : origins)
+				{
+					Departure d = new Departure();
+					d.id = id; d.origin = origin; d.action = action;
+					legacy.add(d);
+				}
+			}
+			return legacy;
+		}
+
+		public List<Integer> getIds()
+		{
+			List<Integer> ids = new ArrayList<>();
+			for (Departure d : getDepartures()) { if (!ids.contains(d.id)) { ids.add(d.id); } }
+			return ids;
+		}
+
+		public WorldPoint nearestOrigin(WorldPoint from)
+		{
+			if (from == null) { return null; }
+			WorldPoint best = null;
+			int distance = Integer.MAX_VALUE;
+			for (Departure d : getDepartures())
+			{
+				WorldPoint point = d.point();
+				if (point != null && point.getPlane() == from.getPlane()
+					&& point.distanceTo2D(from) < distance)
+				{
+					best = point; distance = point.distanceTo2D(from);
+				}
+			}
+			return best;
+		}
+
+		public boolean matchesDeparture(int entityId, WorldPoint point, int range)
+		{
+			if (point == null) { return false; }
+			for (Departure d : getDepartures())
+			{
+				WorldPoint origin = d.point();
+				if (d.id == entityId && origin != null && origin.getPlane() == point.getPlane()
+					&& origin.distanceTo2D(point) <= range) { return true; }
+			}
+			return false;
+		}
+
+		public static class Departure
+		{
+			private int id;
+			private String action;
+			private List<Integer> origin;
+			public int getId() { return id; }
+			public String getAction() { return action; }
+			private WorldPoint point()
+			{
+				return origin == null || origin.size() != 3 ? null
+					: new WorldPoint(origin.get(0), origin.get(1), origin.get(2));
+			}
+		}
+
+		/** Where the guide said it was going. */
+		public String getPlace()
+		{
+			return place == null ? "" : place;
+		}
+
+		/** "boats", "minecarts", "magic_carpets" -- which table this came from. */
+		public String getKind()
+		{
+			return kind == null ? "" : kind;
+		}
+
+		/**
+		 * The npc or object to click.
+		 *
+		 * <p>Which of the two it is, is deliberately not recorded: RuneLite's
+		 * npc and object id spaces overlap -- 492 transport ids exist in both,
+		 * and 7789 is Holgart and also a calquat tree -- so naming a kind here
+		 * would be a guess. The scene is asked about both and answers.
+		 */
+		public int getId()
+		{
+			return id;
+		}
+
+		/** "Rimmington Captain Barnaby": where it goes, and who takes you. */
+		public String getAction()
+		{
+			return action == null ? "" : action;
+		}
+
+		/**
+		 * Every place this vehicle can be boarded for that destination.
+		 *
+		 * <p>Several docks sail to the same island, and which one is wanted is
+		 * wherever the player happens to be standing.
+		 */
+		public List<List<Integer>> getOrigins()
+		{
+			List<List<Integer>> points = new ArrayList<>();
+			for (Departure d : getDepartures()) { if (d.point() != null) { points.add(d.origin); } }
+			return points;
+		}
+
+		public List<Integer> getDestination()
+		{
+			return destination == null ? Collections.emptyList() : destination;
+		}
+	}
 	private Completion completion;
 	private Approach approach;
 	private String questHelper;
 	private String diaryTask;
 	private boolean questStep;
 	private String questContext;
+	private String questSideTaskOf;
+	private Integer questSideTaskFrom;
+
+	public String getQuestSideTaskOf() { return questSideTaskOf; }
+	public Integer getQuestSideTaskFrom() { return questSideTaskFrom; }
 	private boolean advice;
 
 	/**
@@ -151,6 +351,18 @@ public class Step
 	public boolean isQuestFollow()
 	{
 		return questFollow;
+	}
+
+	/**
+	 * Quest coordinates only own navigation when the guide has not named its
+	 * own entity. Dialogue still uses the original instruction. Keep this rule
+	 * shared: the route, rim arrow and fallback tile previously disagreed when
+	 * a named NPC was not loaded and the quest still described an earlier task.
+	 */
+	public QuestHelperSteps.Instruction navigationInstruction(QuestHelperSteps.Instruction instruction)
+	{
+		return target != null && !target.getIds().isEmpty() && !questFollow
+			? null : instruction;
 	}
 
 	/** The guide asks only to start; the mapped first progress value proves it. */
@@ -236,6 +448,20 @@ public class Step
 	public int getOrdinal()
 	{
 		return ordinal;
+	}
+
+	/**
+	 * Renumber this step so it follows the ones before it in its new section.
+	 *
+	 * <p>Only {@link Section#absorb} calls this. A continuation section starts
+	 * its own count at zero, so folding one into the bank it continues would
+	 * otherwise produce 0..14 followed by 0..8 -- and WithdrawTracker reads
+	 * "ordinal below the current step" as "already done", which would quietly
+	 * drop every item the second half of the bank asks for.
+	 */
+	void renumber(int position)
+	{
+		ordinal = position;
 	}
 
 	/** 1 for a top-level step, 2 or 3 for the guide's nested sub-steps. */

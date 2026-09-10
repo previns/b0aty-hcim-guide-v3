@@ -221,13 +221,15 @@ public class QuestProgress
 		// The progress value cannot say -- burning four sets of sheep bones
 		// does not move it at all -- so this is checked first.
 		final Integer handOver = current.getQuestDoneAtPanel();
-		if (handOver != null && panelNow != null)
+		if (handOver != null)
 		{
+			// A missing/unproven panel is not permission to substitute the
+			// coarse var boundary. That var cannot prove the finer action.
+			if (panelNow == null) { return false; }
 			// Better information than the progress value, so it settles the
 			// question by itself: not yet there means not yet done, and the
-			// value rules below are not consulted. Only when Quest Helper's
-			// position is unknown -- no instruction chosen, or a quest with no
-			// sidebar -- do those still get their say.
+			// value rules below are not consulted. An unknown position is not
+			// evidence that this finer-grained objective has happened either.
 			//
 			// Guarded the same way the progress value is, and for the same
 			// reason: a hand-over already reached when the step opened cannot

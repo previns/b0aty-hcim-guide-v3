@@ -39,6 +39,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.font.FontRenderContext;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import javax.inject.Inject;
 import net.runelite.api.Client;
@@ -51,9 +52,8 @@ import net.runelite.client.ui.overlay.components.TitleComponent;
  * Shows the current step over the game, so the guide can be followed without
  * the side panel open.
  *
- * <p>Deliberately just the current step. An overlay that listed the next few
- * would need its own scrolling and its own idea of "next", and the panel
- * already does that better.
+ * <p>The active instruction plus explicitly associated quest side tasks;
+ * never an arbitrary preview of the next few guide steps.
  */
 public class CurrentStepOverlay extends OverlayPanel
 {
@@ -79,6 +79,22 @@ public class CurrentStepOverlay extends OverlayPanel
 	private final WrappedText needsLines = new WrappedText();
 	private QuestHelperSteps.Instruction needsFor;
 	private String needsText = "";
+	private List<Step> sideTasks = Collections.emptyList();
+	private final WrappedText sideTaskLines = new WrappedText();
+	private String sideTaskText = "";
+	private String sideTasksFor;
+
+	public void setSideTasks(Step current, List<Step> tasks)
+	{
+		sideTasksFor = current == null ? null : current.getId();
+		if (!sideTasks.equals(tasks))
+		{
+			sideTasks = new ArrayList<>(tasks);
+			List<String> text = new ArrayList<>();
+			for (Step task : tasks) { text.add(task.getText()); }
+			sideTaskText = String.join("\n", text);
+		}
+	}
 
 	@Inject
 	CurrentStepOverlay(SceneTracker tracker, B0atyGuideConfig config, Client client,
@@ -100,6 +116,7 @@ public class CurrentStepOverlay extends OverlayPanel
 		stepLines.clear();
 		questLines.clear();
 		needsLines.clear();
+		setSideTasks(null, Collections.emptyList());
 	}
 
 	@Override
@@ -147,6 +164,15 @@ public class CurrentStepOverlay extends OverlayPanel
 		renderQuestItems(graphics);
 		renderUnidentified(graphics);
 		renderQuestStep(graphics, step);
+		if (step.getId().equals(sideTasksFor) && !sideTaskText.isEmpty())
+		{
+			panelComponent.getChildren().add(LineComponent.builder().left("Along the way")
+				.leftColor(config.highlightColor()).build());
+			for (String line : sideTaskLines.get(sideTaskText, graphics.getFontMetrics(), WIDTH - 14))
+			{
+				panelComponent.getChildren().add(LineComponent.builder().left(line).build());
+			}
+		}
 		return super.render(graphics);
 	}
 

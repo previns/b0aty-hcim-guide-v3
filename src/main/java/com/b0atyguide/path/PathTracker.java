@@ -367,10 +367,17 @@ public class PathTracker
 		lastTo = to;
 
 		final WorldView view = client.getTopLevelWorldView();
-		final CollisionData[] maps = view.getCollisionMaps();
-		if (maps == null || view.getPlane() >= maps.length || maps[view.getPlane()] == null)
+		if (view == null)
 		{
-			path = Collections.emptyList();
+			clear();
+			return;
+		}
+		final CollisionData[] maps = view.getCollisionMaps();
+		if (maps == null || view.getPlane() < 0 || view.getPlane() >= maps.length || maps[view.getPlane()] == null)
+		{
+			// Do not cache a failed attempt as a route. When collision arrives,
+			// the same stationary player/target must be retried on the next tick.
+			clear();
 			return;
 		}
 
@@ -379,7 +386,7 @@ public class PathTracker
 		final LocalPoint start = client.getLocalPlayer().getLocalLocation();
 		if (start == null)
 		{
-			path = Collections.emptyList();
+			clear();
 			return;
 		}
 
@@ -397,7 +404,7 @@ public class PathTracker
 		}
 		if (end == null)
 		{
-			path = Collections.emptyList();
+			clear();
 			return;
 		}
 
@@ -1143,7 +1150,7 @@ public class PathTracker
 		// Quest Helper's own coordinate for what the game is waiting on. Ahead
 		// of the guide's target because on a quest step the guide names the
 		// quest ("continue Rune Mysteries") while this names the place.
-		final QuestHelperSteps.Instruction instruction = tracker.getInstruction();
+		final QuestHelperSteps.Instruction instruction = routingInstruction(step, tracker.getInstruction());
 		if (instruction != null)
 		{
 			final WorldPoint at = pointOf(instruction.getPoint());
@@ -1151,6 +1158,14 @@ public class PathTracker
 			{
 				return said("quest helper's coordinate", at);
 			}
+		}
+
+		// Board the transport before aiming at its arrival town. Loaded actors
+		// above still win, but an unloaded captain must not erase the dock.
+		if (step.getTravel() != null && (target == null || !target.isHighlightable())
+			&& instruction == null)
+		{
+			return said("the departure dock", step.getTravel().nearestOrigin(from));
 		}
 
 		// Not when they are scattered: taking the first of ninety-one
@@ -1199,6 +1214,16 @@ public class PathTracker
 	 * <p>Straight-line distance, not walking distance: the point of this is to
 	 * choose between shops in different cities, and at that range the two agree.
 	 */
+	static QuestHelperSteps.Instruction routingInstruction(Step step,
+		QuestHelperSteps.Instruction instruction)
+	{
+		// Scene matching and map markers give an explicitly named guide target
+		// priority. Keep that priority when it is outside the loaded scene too:
+		// otherwise the line returns to the quest's previous interaction while
+		// the marker correctly points at the NPC the guide says to visit.
+		return step.navigationInstruction(instruction);
+	}
+
 	private static WorldPoint nearestSeller(Step step, WorldPoint from)
 	{
 		WorldPoint best = null;

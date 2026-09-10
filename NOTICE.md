@@ -42,6 +42,11 @@ only ids and coordinates, and it is displayed as coming from Quest Helper. The
 rest of the fields above are joined by numeric game ID and include no Quest
 Helper text. See `b0aty-guide-data/NOTICE.md` for how each is extracted.
 
+The generic cyclic-widget direction/count logic in `QuestHelperSteps` and
+`InterfaceOverlay` is adapted from Quest Helper's Tribal Totem `PuzzleStep`,
+Copyright (c) 2020 Zoinkwiz and Twinkle, BSD 2-Clause. Its targets, cycle length,
+varbits and widget IDs are extracted into data rather than hardcoded in Java.
+
 ## Shortest Path
 
 `PathFinder`'s movement rules are taken from

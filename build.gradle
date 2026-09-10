@@ -60,7 +60,7 @@ dependencies {
 }
 
 group = 'com.b0atyguide'
-version = '1.1.0'
+version = '1.2.0'
 
 // RuneLite targets Java 11 bytecode. --release rather than source/target so a
 // newer local JDK cannot link against APIs the client will not have at runtime.

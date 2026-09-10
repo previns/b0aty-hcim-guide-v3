@@ -1,3 +1,12 @@
+# 1.2.0 — Bug fixes
+
+- Keep guide progress separate for each RuneScape account; import existing shared progress once into the first account logged in.
+- Fix progress saves stopping during a session and unwanted sidebar jumps.
+- Improve quest dialogue, item and shop highlights, including Tribal Totem's combination lock.
+- Show mid-quest errands alongside Quest Helper without interrupting its guidance.
+- Correct travel boarding points, charter directions and departure-specific captains.
+- Improve quest-branch coverage and keep navigation in sync with the current guide step.
+
 # 1.1.0 — Bug fixes
 
 ## Following quests

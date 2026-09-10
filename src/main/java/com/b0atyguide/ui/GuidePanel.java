@@ -703,6 +703,7 @@ public class GuidePanel extends PluginPanel
 	{
 		SwingUtilities.invokeLater(() ->
 		{
+			if (guide == null || progress == null) { return; }
 			this.currentStep = current;
 			updateEpisodeLink(current);
 			updateStatus();
@@ -713,6 +714,16 @@ public class GuidePanel extends PluginPanel
 
 			followCurrentSection(current);
 		});
+	}
+
+	/** Rebind rows to the new profile rather than refreshing the old tick set. */
+	public void setProgress(Progress loaded)
+	{
+		if (guide == null || progress == loaded) { return; }
+		progress = loaded;
+		currentSectionId = null;
+		buildSections();
+		applyFilter();
 	}
 
 	/**

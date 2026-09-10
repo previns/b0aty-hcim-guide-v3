@@ -122,7 +122,7 @@ public class HighlightOverlay extends Overlay
 		// and then the destination tile -- 1,939 instructions carry a
 		// coordinate and no ids, which is exactly when the scene tracker wants
 		// nothing and exactly when the tile is the only guidance there is.
-		final QuestHelperSteps.Instruction instruction = tracker.getInstruction();
+		final QuestHelperSteps.Instruction instruction = tracker.getNavigationInstruction();
 		final boolean somewhereToMark = instruction != null
 			&& (!instruction.getTiles().isEmpty() || instruction.getPoint().size() >= 3);
 		if (!tracker.isTracking() && !bankTracker.isTracking() && !somewhereToMark
@@ -159,7 +159,7 @@ public class HighlightOverlay extends Overlay
 		{
 			return;
 		}
-		final QuestHelperSteps.Instruction instruction = tracker.getInstruction();
+		final QuestHelperSteps.Instruction instruction = tracker.getNavigationInstruction();
 		if (instruction == null)
 		{
 			return;
@@ -344,10 +344,10 @@ public class HighlightOverlay extends Overlay
 			return;
 		}
 
-		final int icon = instruction == null ? 0 : instruction.getIcon();
 		// One instruction uses the same icon on every matched entity. Ask the
 		// image cache once, and do not project an icon position when none exists.
-		final BufferedImage sprite = icon <= 0 ? null : itemManager.getImage(icon);
+		final BufferedImage sprite = instruction == null || !instruction.hasIcon()
+			? null : itemManager.getImage(instruction.getIcon());
 
 		if (config.highlightNpcs())
 		{

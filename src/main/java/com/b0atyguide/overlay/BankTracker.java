@@ -91,6 +91,8 @@ public class BankTracker
 	{
 		objects.clear();
 		npcs.clear();
+		lastStepId = null;
+		lastScanFrom = null;
 	}
 
 	/** The scene is rebuilt on a loading screen, so anything held is stale. */
@@ -131,11 +133,11 @@ public class BankTracker
 		{
 			return;
 		}
-		lastStepId = current.getId();
-		lastScanFrom = here;
-
 		clear();
 		final WorldView view = client.getTopLevelWorldView();
+		if (view == null) { return; }
+		lastStepId = current.getId();
+		lastScanFrom = here;
 
 		for (NPC npc : view.npcs())
 		{
@@ -143,7 +145,8 @@ public class BankTracker
 			{
 				break;
 			}
-			if (npc != null && npc.getWorldLocation().distanceTo(here) <= MAX_TILES
+			final WorldPoint position = RealPoint.of(client, npc);
+			if (position != null && position.distanceTo(here) <= MAX_TILES
 				&& banks(npc.getTransformedComposition()))
 			{
 				npcs.add(npc);
@@ -155,8 +158,9 @@ public class BankTracker
 
 	private void consider(TileObject object, WorldPoint here)
 	{
+		final WorldPoint position = object == null ? null : RealPoint.of(client, object.getWorldLocation());
 		if (object == null || objects.size() >= MAX_MATCHES
-			|| object.getWorldLocation().distanceTo(here) > MAX_TILES)
+			|| position == null || position.distanceTo(here) > MAX_TILES)
 		{
 			return;
 		}

@@ -38,7 +38,9 @@ import java.util.Set;
  * <p>Pure data plus the migration rule. Nothing here touches the client or
  * config, so all of it is testable without a game running -- which matters,
  * because this is the only part of the plugin that can destroy something the
- * player cannot get back.
+ * player cannot get back. Public operations are synchronized: Swing toggles
+ * checkboxes while the client thread auto-ticks and saves them. Exposed ID
+ * sets are snapshots, never live views that can change during serialization.
  */
 public class Progress
 {
@@ -68,14 +70,14 @@ public class Progress
 		this.manual.retainAll(this.completed);
 	}
 
-	public boolean isManual(String stepId)
+	public synchronized boolean isManual(String stepId)
 	{
 		return manual.contains(stepId);
 	}
 
-	public Set<String> manualIds()
+	public synchronized Set<String> manualIds()
 	{
-		return Collections.unmodifiableSet(manual);
+		return Collections.unmodifiableSet(new LinkedHashSet<>(manual));
 	}
 
 	/**
@@ -87,7 +89,7 @@ public class Progress
 	 *
 	 * @return true when anything changed
 	 */
-	public boolean setSectionComplete(Section section, boolean complete)
+	public synchronized boolean setSectionComplete(Section section, boolean complete)
 	{
 		boolean changed = false;
 		for (Step step : section.getSteps())
@@ -106,7 +108,7 @@ public class Progress
 	}
 
 	/** How many steps in this section would survive un-completing the bank. */
-	public int manualIn(Section section)
+	public synchronized int manualIn(Section section)
 	{
 		int count = 0;
 		for (Step step : section.getSteps())
@@ -119,13 +121,13 @@ public class Progress
 		return count;
 	}
 
-	public boolean isComplete(String stepId)
+	public synchronized boolean isComplete(String stepId)
 	{
 		return completed.contains(stepId);
 	}
 
 	/** Ticking a single step records it as manual; unticking forgets that. */
-	public void setComplete(String stepId, boolean complete)
+	public synchronized void setComplete(String stepId, boolean complete)
 	{
 		if (complete)
 		{
@@ -139,17 +141,17 @@ public class Progress
 		}
 	}
 
-	public Set<String> completedIds()
+	public synchronized Set<String> completedIds()
 	{
-		return Collections.unmodifiableSet(completed);
+		return Collections.unmodifiableSet(new LinkedHashSet<>(completed));
 	}
 
-	public int count()
+	public synchronized int count()
 	{
 		return completed.size();
 	}
 
-	public void clear()
+	public synchronized void clear()
 	{
 		completed.clear();
 		manual.clear();
@@ -164,7 +166,7 @@ public class Progress
 	 *
 	 * @return how many ids were rewritten
 	 */
-	public int applyMigrations(Map<String, String> migrations)
+	public synchronized int applyMigrations(Map<String, String> migrations)
 	{
 		if (migrations.isEmpty() || completed.isEmpty())
 		{
@@ -227,7 +229,7 @@ public class Progress
 	 *
 	 * @return how many stale ids were dropped
 	 */
-	public int prune(Guide guide)
+	public synchronized int prune(Guide guide)
 	{
 		final Set<String> known = new LinkedHashSet<>();
 		for (Section section : guide.getSections())
@@ -243,7 +245,7 @@ public class Progress
 		return before - completed.size();
 	}
 
-	public int completedIn(Section section)
+	public synchronized int completedIn(Section section)
 	{
 		int done = 0;
 		for (Step step : section.getSteps())
@@ -256,14 +258,14 @@ public class Progress
 		return done;
 	}
 
-	public boolean isSectionComplete(Section section)
+	public synchronized boolean isSectionComplete(Section section)
 	{
 		return !section.getSteps().isEmpty()
 			&& completedIn(section) == section.getSteps().size();
 	}
 
 	/** The first step the player has not ticked, or null when the guide is done. */
-	public Step firstIncompleteStep(Guide guide)
+	public synchronized Step firstIncompleteStep(Guide guide)
 	{
 		for (Section section : guide.getSections())
 		{

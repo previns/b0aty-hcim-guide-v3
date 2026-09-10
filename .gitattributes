@@ -5,3 +5,21 @@
 # The guide ships inside the jar. A Windows checkout was rewriting it to CRLF,
 # which cost 90 KB -- 5% of the plugin -- in carriage returns nobody reads.
 *.json text eol=lf
+
+# ...and it is 462,000 lines of it. Every regeneration rewrites the whole file.
+#
+# Marked binary for diffing only. The bytes committed and shipped are unchanged
+# and the LF normalisation above still applies (checked: text set, eol lf, diff
+# unset); git reports "1 file changed, 0 insertions(+), 0 deletions(-)".
+#
+# `linguist-generated=true` was tried instead and measured against the live hub
+# commit: it collapses the diff in GitHub's web UI but still counts every line,
+# giving 576,850 additions where `-diff` gives 8,765. A reviewer reading the web
+# page sees the same either way; a review bot reading the API does not, and
+# spending its budget on half a million lines of machine output is the problem
+# this is here to solve.
+#
+# Nothing is hidden. The guide's diff is meant to be read in b0aty-guide-data,
+# where the wiki sync opens a pull request against a pretty-printed copy and a
+# person compares the steps before players see them.
+src/main/resources/com/b0atyguide/guide.json -diff
