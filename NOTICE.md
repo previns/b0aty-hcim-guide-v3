@@ -61,8 +61,15 @@ The movement rules are re-expressed against the client's live collision flags
 for the loaded scene. `open-transports.tsv` is a filtered copy of Shortest
 Path's `transports.tsv`: adjacent, same-plane entries whose action begins
 `Open` or `Slash`. It supplies an unambiguous crossing direction only when a
-matching gate, door or web candidate is currently present in the live scene. The complete
-prebuilt world collision map and all other transport data are not shipped.
+matching gate, door or web candidate is currently present in the live scene.
+
+Travelling steps carry Shortest Path's vehicle tables as `step.travel`. The 27
+steps that name a journey ship 106 `departures` between them, drawn from
+`ships.tsv`, `charter_ships.tsv` and `magic_carpets.tsv`: for each place the
+vehicle can be boarded, the tile, the npc or object id to click, and the menu
+wording. Route grouping comes from those files' own section headers.
+
+The complete prebuilt world collision map is not shipped.
 
 ## RuneLite
 
