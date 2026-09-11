@@ -137,7 +137,7 @@ public class MinimapOverlay extends Overlay
 			return null;
 		}
 		final Target target = step == null ? null : step.getTarget();
-		if (tracker.getNavigationInstruction() == null && target != null
+		if (tracker.getNavigationInstruction() == null && tracker.getActiveTravel() == null && target != null
 			&& !target.isWikiBacked() && !config.highlightUnconfirmed())
 		{
 			return null;
@@ -276,6 +276,10 @@ public class MinimapOverlay extends Overlay
 
 	private WorldPoint firstPoint(Target target)
 	{
+		if (tracker.getActiveTravel() != null)
+		{
+			return tracker.getActiveTravel().nearestOrigin(RealPoint.of(client, client.getLocalPlayer()));
+		}
 		// What the quest is waiting on beats what the step names: on a quest
 		// step the guide says "continue Rune Mysteries" and Quest Helper says
 		// where.

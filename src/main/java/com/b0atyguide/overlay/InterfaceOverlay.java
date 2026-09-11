@@ -27,12 +27,16 @@ package com.b0atyguide.overlay;
 
 import com.b0atyguide.B0atyGuideConfig;
 import com.b0atyguide.data.QuestHelperSteps;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.widgets.Widget;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -107,7 +111,75 @@ public class InterfaceOverlay extends Overlay
 		{
 			drawPuzzle(graphics, puzzle);
 		}
+		for (QuestHelperSteps.CombinationLock lock : instruction.getCombinationLocks())
+		{
+			drawCombinationLock(graphics, lock);
+		}
 		return null;
+	}
+
+	/**
+	 * The dials of a combination lock: which arrow, and how many clicks.
+	 *
+	 * <p>What Quest Helper draws for the chest in the Ribbiting Tale and the
+	 * door in The Final Dawn. The arrows are children of the lock widget rather
+	 * than components of their own, and each dial's current letter is a client
+	 * int, not a varbit.
+	 */
+	private void drawCombinationLock(Graphics2D graphics, QuestHelperSteps.CombinationLock lock)
+	{
+		if (!lock.isValid())
+		{
+			return;
+		}
+		Widget submit = client.getWidget(lock.getSubmit());
+		Widget parent = client.getWidget(lock.getParent());
+		if (submit == null || submit.isHidden() || parent == null || parent.isHidden())
+		{
+			return;
+		}
+		// Nothing partial: every arrow has to be on screen before any is drawn,
+		// so a half-loaded interface cannot produce half an answer.
+		for (QuestHelperSteps.Dial dial : lock.getCycles())
+		{
+			final int current = client.getVarcIntValue(dial.getVarc());
+			if (current < 0 || current >= lock.getSize())
+			{
+				return;
+			}
+			if (parent.getChild(dial.getDown()) == null || parent.getChild(dial.getUp()) == null)
+			{
+				return;
+			}
+		}
+
+		boolean solved = true;
+		for (QuestHelperSteps.Dial dial : lock.getCycles())
+		{
+			final int current = client.getVarcIntValue(dial.getVarc());
+			final int child = dial.arrow(current, lock.getSize());
+			if (child < 0)
+			{
+				continue;
+			}
+			solved = false;
+			final Widget arrow = parent.getChild(child);
+			if (arrow == null || arrow.isHidden())
+			{
+				continue;
+			}
+			markLeaf(graphics, arrow);
+			final Rectangle bounds = arrow.getBounds();
+			if (bounds == null || bounds.isEmpty())
+			{
+				continue;
+			}
+			drawCount(graphics, bounds, Integer.toString(dial.clicks(current, lock.getSize())));
+		}
+		if (solved)
+		{
+			markLeaf(graphics, submit);
+		}
 	}
 
 	private void drawPuzzle(Graphics2D graphics, QuestHelperSteps.WidgetPuzzle puzzle)
@@ -153,15 +225,48 @@ public class InterfaceOverlay extends Overlay
 			{
 				continue;
 			}
-			graphics.setColor(config.highlightColor());
-			String count = Integer.toString(cycle.distance(current));
-			graphics.drawString(count, bounds.x + (bounds.width - graphics.getFontMetrics().stringWidth(count)) / 2,
-				bounds.y + (bounds.height + graphics.getFontMetrics().getAscent()) / 2);
+			drawCount(graphics, bounds, Integer.toString(cycle.distance(current)));
 		}
 		if (solved)
 		{
 			markLeaf(graphics, submit);
 		}
+	}
+
+	/** Between the control and its count, so the two never touch. */
+	private static final int COUNT_GAP = 4;
+
+	/**
+	 * How many clicks a control needs, written beside it rather than on it.
+	 *
+	 * <p>Drawn in the middle of the arrow it was barely legible: the arrow is a
+	 * pale graphic with its own detail, and a thin glyph on top of it competes
+	 * with the letter the dial is showing. So it goes outside, to the left,
+	 * bold, over a dark backing that keeps it readable against whatever the
+	 * interface puts behind it -- and to the right instead when the control is
+	 * close enough to the screen edge that the left would be clipped.
+	 */
+	private void drawCount(Graphics2D graphics, Rectangle bounds, String count)
+	{
+		final Font previous = graphics.getFont();
+		graphics.setFont(FontManager.getRunescapeBoldFont().deriveFont(Font.BOLD, 16f));
+		final FontMetrics metrics = graphics.getFontMetrics();
+		final int width = metrics.stringWidth(count);
+
+		int x = bounds.x - COUNT_GAP - width;
+		if (x < 0)
+		{
+			x = bounds.x + bounds.width + COUNT_GAP;
+		}
+		// Centred on the control by the glyphs themselves, not by the line box,
+		// which is taller than the digits and would sit them low.
+		final int y = bounds.y + (bounds.height + metrics.getAscent() - metrics.getDescent()) / 2;
+
+		graphics.setColor(Color.BLACK);
+		graphics.drawString(count, x + 1, y + 1);
+		graphics.setColor(config.highlightColor());
+		graphics.drawString(count, x, y);
+		graphics.setFont(previous);
 	}
 
 	private void mark(Graphics2D graphics, Widget widget,

@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -65,8 +66,17 @@ import okhttp3.Response;
 @Singleton
 public class SectionImages
 {
-	/** Only this host, checked before any request leaves. */
-	private static final String ALLOWED_HOST = "i.ibb.co";
+	/**
+	 * Only this host, checked before any request leaves.
+	 *
+	 * <p>The screenshots used to come from i.ibb.co, the image host the wiki
+	 * page hotlinks. That put every player's IP in front of a server the
+	 * RuneLite developers cannot vouch for, and the plugin hub said so on the
+	 * install page. They are now served from the plugin repository's own
+	 * `images` branch, which is where the hub's maintainers suggested putting
+	 * them.
+	 */
+	private static final String ALLOWED_HOST = "raw.githubusercontent.com";
 
 	/**
 	 * The guide has 173 screenshots. Holding them all is tens of megabytes for
@@ -90,8 +100,20 @@ public class SectionImages
 			}
 		};
 
-	/** URLs already tried and failed, so a dead link is not re-fetched forever. */
-	private final Map<String, Boolean> failed = new LinkedHashMap<>();
+	/**
+	 * How many times fetching each URL has failed in a way worth retrying.
+	 *
+	 * <p>A dead link must not be re-fetched forever, but a timed-out one must
+	 * not be written off either. Every failure used to be final: one dropped
+	 * connection and that screenshot was gone until the guide reloaded, which
+	 * is why the larger ones -- bank 90's is half a megabyte -- were the ones
+	 * that went missing. A link that is actually wrong is recorded as
+	 * {@link #GIVE_UP} attempts at once and never tried again.
+	 */
+	private final Map<String, Integer> failures = new LinkedHashMap<>();
+
+	/** Transient failures tolerated per URL before it is left alone. */
+	private static final int GIVE_UP = 3;
 
 	private Function<String, String> expectedHash;
 	private final Map<String, Pending> pending = new LinkedHashMap<>();
@@ -110,7 +132,14 @@ public class SectionImages
 		// Refuse redirects instead of letting screenshot hosting contact an
 		// unrelated server through the host application's shared HTTP client.
 		this.httpClient = httpClient.newBuilder()
-			.followRedirects(false).followSslRedirects(false).build();
+			.followRedirects(false).followSslRedirects(false)
+			// Ours, not the host application's. A screenshot is half a megabyte
+			// at the top end, and inheriting a timeout meant for small API calls
+			// is what turned the biggest ones into missing pictures.
+			.connectTimeout(Duration.ofSeconds(15))
+			.readTimeout(Duration.ofSeconds(30))
+			.callTimeout(Duration.ofSeconds(90))
+			.build();
 	}
 
 	/** Drop the decoded images and the hashes; the plugin is shutting down. */
@@ -128,7 +157,7 @@ public class SectionImages
 		}
 		pending.clear();
 		cache.clear();
-		failed.clear();
+		failures.clear();
 		expectedHash = null;
 	}
 
@@ -169,7 +198,7 @@ public class SectionImages
 			onLoaded.accept(cached);
 			return;
 		}
-		if (failed.containsKey(url))
+		if (failures.getOrDefault(url, 0) >= GIVE_UP)
 		{
 			return;
 		}
@@ -190,18 +219,34 @@ public class SectionImages
 			@Override
 			public void onFailure(Call call, IOException e)
 			{
+				// The attempt did not finish. That says nothing about the link,
+				// so it stays eligible to be tried again.
 				log.debug("could not fetch {}", url, e);
-				complete(null);
+				complete(null, false);
 			}
 
 			@Override
 			public void onResponse(Call call, Response response)
 			{
 				BufferedImage image = null;
+				// Whether another attempt could ever do better. A refusal, a
+				// body too large, bytes that are not what the guide was built
+				// against: none of those change on a retry. A server error or a
+				// truncated read might.
+				boolean settled = true;
 				try (Response closing = response)
 				{
-					if (closing.isSuccessful() && closing.body() != null
-						&& closing.body().contentLength() <= MAX_BYTES)
+					if (!closing.isSuccessful())
+					{
+						settled = closing.code() < 500;
+						log.debug("{} returned {}", url, closing.code());
+					}
+					else if (closing.body() == null
+						|| closing.body().contentLength() > MAX_BYTES)
+					{
+						log.debug("{} is larger than the download limit", url);
+					}
+					else
 					{
 						final byte[] body = readBounded(closing.body().byteStream(), MAX_BYTES);
 						// Hashed before it is decoded, so bytes that do not
@@ -212,16 +257,22 @@ public class SectionImages
 						}
 					}
 				}
-				catch (IOException | RuntimeException e)
+				catch (IOException e)
+				{
+					// A read that stopped partway through, not a bad link.
+					settled = false;
+					log.debug("could not read {}", url, e);
+				}
+				catch (RuntimeException e)
 				{
 					// ImageIO throws unchecked on some malformed input.
 					log.debug("could not decode {}", url, e);
 				}
 
-				complete(image);
+				complete(image, settled);
 			}
 
-			private void complete(BufferedImage loaded)
+			private void complete(BufferedImage loaded, boolean settled)
 			{
 				SwingUtilities.invokeLater(() ->
 				{
@@ -234,9 +285,13 @@ public class SectionImages
 					pending.remove(url);
 					if (loaded == null)
 					{
-						failed.put(url, Boolean.TRUE);
+						// A settled failure is written off in one go; an
+						// unfinished one is counted, and the next time the
+						// panel asks for this section it tries again.
+						failures.merge(url, settled ? GIVE_UP : 1, Integer::sum);
 						return;
 					}
+					failures.remove(url);
 					cache.put(url, loaded);
 					for (Consumer<BufferedImage> listener : request.listeners)
 					{

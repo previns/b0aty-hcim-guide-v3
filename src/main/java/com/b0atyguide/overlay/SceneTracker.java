@@ -143,7 +143,21 @@ public class SceneTracker
 	 * subject of a page. Only the first can be held to.
 	 */
 	private boolean exactly;
+
+	/**
+	 * Outline whatever stands on the wanted tile, because Quest Helper named a
+	 * tile and not an id.
+	 *
+	 * <p>2,720 of its object steps reach us with a coordinate and no id: the
+	 * constant they name does not exist in the released runelite-api, so it
+	 * resolves to nothing. Quest Helper still outlines them, because it was
+	 * compiled against a client that has the id and we were not. The tile is
+	 * the same tile, and the object standing on it is the object it means.
+	 */
+	private boolean onTile;
 	private Step.Travel activeTravel;
+	private boolean travelArrived;
+	private WorldPoint lastTravelAt;
 
 	/**
 	 * Point the tracker at a step. Cheap enough to call on every panel
@@ -205,18 +219,34 @@ public class SceneTracker
 	private void apply(Step step, String sectionLabel,
 		QuestHelperSteps.Instruction instruction)
 	{
+		if (this.step != step)
+		{
+			travelArrived = false;
+			lastTravelAt = null;
+		}
 		this.step = step;
 		this.sectionLabel = sectionLabel;
 		this.instruction = instruction;
-		activeTravel = null;
+		activeTravel = step == null || travelArrived ? null : step.getTravel();
+		if (activeTravel != null && client != null
+			&& activeTravel.atArrival(RealPoint.of(client, client.getLocalPlayer())))
+		{
+			travelArrived = true;
+			activeTravel = null;
+		}
 		instruction = getNavigationInstruction();
 
 		final Target target = step == null ? null : step.getTarget();
 		final boolean usable = target != null && target.isHighlightable();
-		final boolean hasInstruction = instruction != null && !instruction.getIds().isEmpty();
+		// An instruction with no id still speaks if it names a tile and says the
+		// thing is scenery. Requiring ids here is what left Death on the Isle's
+		// window, cellar and wine unmarked while Quest Helper outlined them.
+		final boolean hasInstruction = instruction != null
+			&& (!instruction.getIds().isEmpty()
+				|| (instruction.isObject() && !instruction.getPoint().isEmpty()));
 		final List<Step.Seller> sellers = step == null
 			? Collections.emptyList() : step.getSellers();
-		final Step.Travel travel = step == null ? null : step.getTravel();
+		final Step.Travel travel = activeTravel;
 
 		if (!usable && !hasInstruction && sellers.isEmpty() && travel == null)
 		{
@@ -260,10 +290,15 @@ public class SceneTracker
 			// is the one. A wiki coordinate is a marker dropped somewhere on the
 			// subject of a page and cannot be held to that.
 			exactly = here != null;
+			// No id to match, so the tile is the whole of the match. Strictly
+			// that tile: this is not a search radius, it is Quest Helper saying
+			// the thing is there.
+			onTile = wantedIds.isEmpty() && here != null;
 		}
 		else
 		{
 			source = usable ? "the guide's own target" : "nothing";
+			onTile = false;
 			wantedNames = usable ? target.getNames() : Collections.emptyList();
 			wantedIds = new HashSet<>(usable ? target.getIds() : Collections.emptyList());
 			wantNpc = usable && Target.KIND_NPC.equals(target.getKind());
@@ -279,7 +314,7 @@ public class SceneTracker
 			// Asked of npcs *and* objects, because the id spaces overlap and the
 			// build refuses to guess which one a transport id is -- 7789 is
 			// Holgart and also a calquat tree. Only one of them is at the dock.
-			if (!usable && travel != null)
+			if (travel != null)
 			{
 				source = "the way there";
 				activeTravel = travel;
@@ -289,14 +324,22 @@ public class SceneTracker
 				// Several docks sail to the same island; the nearest is the one
 				// the player is standing at.
 				wantedAt = points(travel.getOrigins());
-				spread = travel.getOrigins().size() > 1;
+				spread = false;
+				// All departures are candidates, not simultaneous destinations.
+				// Limit the scene search to the nearest boarding stop so scene
+				// iteration order cannot pick a more distant cart or captain.
+				if (client != null)
+				{
+					final WorldPoint nearest = travel.nearestOrigin(RealPoint.of(client, client.getLocalPlayer()));
+					wantedAt = nearest == null ? Collections.emptyList() : Collections.singletonList(nearest);
+				}
 			}
 		}
 
 		// Whoever sells what the step says to buy. Every shop that stocks it,
 		// because which one is right depends on where the player is standing --
 		// and that is settled below, by keeping the matches nearest to them.
-		if (!sellers.isEmpty() && !usable && !hasInstruction)
+		if (!sellers.isEmpty() && !usable && !hasInstruction && travel == null)
 		{
 			source = "shopkeepers who sell it";
 			for (Step.Seller seller : sellers)
@@ -332,7 +375,24 @@ public class SceneTracker
 	/** The navigation subset; the full instruction remains available to dialogue. */
 	public QuestHelperSteps.Instruction getNavigationInstruction()
 	{
-		return step == null ? null : step.navigationInstruction(instruction);
+		return step == null || activeTravel != null ? null : step.navigationInstruction(instruction);
+	}
+
+	public Step.Travel getActiveTravel()
+	{
+		return activeTravel;
+	}
+
+	/** Navigation phase only: arriving never checks off a compound guide step.
+	 * Keep the arrival latched through quest-instruction refreshes; otherwise
+	 * walking onward from the stop sends the player back to board again.
+	 */
+	public void updateTravel(WorldPoint at)
+	{
+		if (activeTravel == null || at == null || at.equals(lastTravelAt)) { return; }
+		lastTravelAt = at;
+		if (activeTravel.atArrival(at)) { travelArrived = true; }
+		apply(step, sectionLabel, instruction);
 	}
 
 	public void clear()
@@ -342,6 +402,9 @@ public class SceneTracker
 			step = null;
 			sectionLabel = null;
 			instruction = null;
+			activeTravel = null;
+			travelArrived = false;
+			lastTravelAt = null;
 			clearMatches();
 		});
 	}
@@ -354,6 +417,7 @@ public class SceneTracker
 		wantedAt = Collections.emptyList();
 		spread = false;
 		exactly = false;
+		onTile = false;
 		source = "nothing";
 		wantNpc = false;
 		wantObject = false;
@@ -372,7 +436,9 @@ public class SceneTracker
 	 */
 	public boolean isTracking()
 	{
-		return !wantedNames.isEmpty() || !wantedIds.isEmpty();
+		// Or a tile, when that is all Quest Helper gave: the outline and the
+		// minimap arrow are exactly what those steps were missing.
+		return !wantedNames.isEmpty() || !wantedIds.isEmpty() || onTile;
 	}
 
 	public Step getStep()
@@ -488,6 +554,7 @@ public class SceneTracker
 		}
 		if (activeTravel != null)
 		{
+			if (distance(realPointOf(npc)) >= ROAM) { return false; }
 			NPCComposition composition = npc.getTransformedComposition();
 			return activeTravel.matchesDeparture(npc.getId(), realPointOf(npc), ROAM - 1)
 				|| (composition != null && activeTravel.matchesDeparture(composition.getId(), realPointOf(npc), ROAM - 1));
@@ -520,9 +587,14 @@ public class SceneTracker
 		}
 		if (activeTravel != null)
 		{
+			if (distance(realPointOf(object)) > 3) { return false; }
 			ObjectComposition composition = SceneObjects.definitionOf(client, object);
 			return activeTravel.matchesDeparture(object.getId(), realPointOf(object), 3)
 				|| (composition != null && activeTravel.matchesDeparture(composition.getId(), realPointOf(object), 3));
+		}
+		if (onTile)
+		{
+			return standsOn(object);
 		}
 		if (!wantedIds.isEmpty() && wantedIds.contains(object.getId()))
 		{

@@ -205,6 +205,15 @@ public class Step
 			return best;
 		}
 
+		/** The source's arrival tile, not a town-centre marker. A small landing
+		 * tolerance allows the first walking tick after a loading screen. */
+		public boolean atArrival(WorldPoint at)
+		{
+			if (at == null || destination == null || destination.size() != 3) { return false; }
+			WorldPoint arrival = new WorldPoint(destination.get(0), destination.get(1), destination.get(2));
+			return arrival.getPlane() == at.getPlane() && arrival.distanceTo2D(at) <= 8;
+		}
+
 		public boolean matchesDeparture(int entityId, WorldPoint point, int range)
 		{
 			if (point == null) { return false; }

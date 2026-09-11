@@ -1,3 +1,13 @@
+# 1.3.0 — Quest puzzles and routing
+
+- Show Quest Helper's puzzle answers instead of its "turn on solutions" message: chest codes, door passwords, the stone order on Death Plateau, which guards to mark in Children of the Sun.
+- Solve combination locks on screen, marking each dial's arrow with the number of clicks and the Confirm button once they are all set.
+- Highlight quest scenery that Quest Helper locates by tile rather than by id, which covers about a quarter of its object steps.
+- Draw the line to the nearest of several possible places — a deposit box, a statue, a captain — instead of waiting for one to come into view.
+- Follow Ribbiting Tale of a Lily Pad Dispute, and stop showing one puzzle's instructions on a different puzzle.
+- Board the right ship for crossings the step does not name a boat for, such as Entrana and Brimhaven, and stop answering island teleports with a dock.
+- Send "Head to Varlamore" to Regulus Cento outside Varrock.
+
 # 1.2.0 — Bug fixes
 
 - Keep guide progress separate for each RuneScape account; import existing shared progress once into the first account logged in.

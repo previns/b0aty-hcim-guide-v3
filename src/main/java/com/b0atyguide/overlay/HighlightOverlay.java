@@ -327,7 +327,7 @@ public class HighlightOverlay extends Overlay
 	{
 		final Step step = tracker.getStep();
 		final Target target = step == null ? null : step.getTarget();
-		final QuestHelperSteps.Instruction instruction = tracker.getInstruction();
+		final QuestHelperSteps.Instruction instruction = tracker.getNavigationInstruction();
 		final boolean fromQuest = instruction != null && !instruction.getIds().isEmpty();
 
 		// A name the wiki could not confirm is opt-in. It is still safe -- it
@@ -338,7 +338,7 @@ public class HighlightOverlay extends Overlay
 		// its own source, not a name this pipeline guessed. Requiring a target
 		// here meant a step whose only guidance was the quest -- "continue
 		// Gertrude's Cat" -- outlined nothing, however well the scene matched.
-		if (!fromQuest
+		if (!fromQuest && tracker.getActiveTravel() == null
 			&& (target == null || (!target.isWikiBacked() && !config.highlightUnconfirmed())))
 		{
 			return;

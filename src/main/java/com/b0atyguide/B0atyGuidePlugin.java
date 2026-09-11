@@ -513,6 +513,35 @@ public class B0atyGuidePlugin extends Plugin
 	}
 
 	/**
+	 * Whether any static child of a widget shows the wanted words.
+	 *
+	 * <p>Quest Helper's checkChildren: some interfaces put their text on the
+	 * rows rather than on the box around them, and reading only the parent
+	 * answers no to a menu that plainly says yes.
+	 */
+	private static boolean childShows(Widget parent, String wanted)
+	{
+		final Widget[] children = parent.getStaticChildren();
+		if (children == null)
+		{
+			return false;
+		}
+		for (Widget child : children)
+		{
+			if (child == null || child.isHidden())
+			{
+				continue;
+			}
+			final String showing = child.getText();
+			if (showing != null && showing.contains(wanted))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * What Quest Helper says to do on this step right now, or null.
 	 *
 	 * <p>Called on the client thread: branch conditions also inspect widgets and
@@ -604,6 +633,48 @@ public class B0atyGuidePlugin extends Plugin
 				{
 					final Widget widget = client.getWidget(id);
 					return widget != null && !widget.isHidden();
+				}
+
+				/**
+				 * Quest Helper's WidgetTextRequirement.checkWidget, followed
+				 * exactly: the named widget, then the named child of it if one
+				 * was given, and a "contains" test against each wanted string.
+				 * Hidden never counts -- the interface has to be on screen, not
+				 * merely loaded.
+				 */
+				@Override
+				public boolean widgetShows(QuestHelperSteps.Shown shown)
+				{
+					Widget widget = client.getWidget(shown.getGroup(), shown.getChild());
+					if (widget == null)
+					{
+						return false;
+					}
+					if (shown.getIndex() != null)
+					{
+						widget = widget.getChild(shown.getIndex());
+					}
+					if (widget == null || widget.isHidden())
+					{
+						return false;
+					}
+					for (String wanted : shown.getText())
+					{
+						if (wanted == null)
+						{
+							continue;
+						}
+						final String showing = widget.getText();
+						if (showing != null && showing.contains(wanted))
+						{
+							return true;
+						}
+						if (shown.isChildren() && childShows(widget, wanted))
+						{
+							return true;
+						}
+					}
+					return false;
 				}
 			};
 		final Map<Integer, Integer> held = QuestProgress.guidanceInventory(step, withdrawTracker.carried());
@@ -936,6 +1007,7 @@ public class B0atyGuidePlugin extends Plugin
 		// tracker where they are really heading.
 		dialogueHighlighter.onTick();
 		refreshQuestInstruction();
+		sceneTracker.updateTravel(playerAt);
 		refreshQuestSideTasks();
 		syncArrived();
 		// Acquiring an explicit quest item need not move a varbit (Waterfall's

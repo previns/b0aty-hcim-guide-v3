@@ -1103,6 +1103,53 @@ public class PathTracker
 	}
 
 	/**
+	 * What a floor change is worth when comparing two candidate coordinates.
+	 *
+	 * <p>Not a real walking cost -- the route to another floor goes through
+	 * stairs the pathfinder finds for itself. It only has to be large enough
+	 * that a coordinate on the player's own floor wins against one directly
+	 * overhead, which would otherwise measure as zero tiles away.
+	 */
+	private static final int PLANE_COST = 48;
+
+	/**
+	 * Whichever of these coordinates the player is closest to.
+	 *
+	 * <p>Measured on the same plane where one is known, because a staircase is
+	 * not a short walk. Ties keep the earlier coordinate, so the answer does
+	 * not depend on list order when two are equally far.
+	 */
+	static WorldPoint nearestOf(List<List<Integer>> points, WorldPoint from)
+	{
+		WorldPoint best = null;
+		int closest = Integer.MAX_VALUE;
+		for (List<Integer> raw : points)
+		{
+			if (raw == null || raw.size() < 3)
+			{
+				continue;
+			}
+			final WorldPoint candidate = new WorldPoint(raw.get(0), raw.get(1), raw.get(2));
+			if (from == null)
+			{
+				return candidate;
+			}
+			// A coordinate on another floor is still a destination; the approach
+			// tracker takes over once the player is close enough for stairs to
+			// matter. Count the climb as distance so a ground-floor match wins
+			// a tie against one overhead.
+			final int away = candidate.distanceTo2D(from)
+				+ Math.abs(candidate.getPlane() - from.getPlane()) * PLANE_COST;
+			if (away < closest)
+			{
+				closest = away;
+				best = candidate;
+			}
+		}
+		return best;
+	}
+
+	/**
 	 * Where the player is being sent. A loaded NPC or object beats the wiki
 	 * coordinate, since it is where the thing actually is right now.
 	 */
@@ -1150,7 +1197,7 @@ public class PathTracker
 		// Quest Helper's own coordinate for what the game is waiting on. Ahead
 		// of the guide's target because on a quest step the guide names the
 		// quest ("continue Rune Mysteries") while this names the place.
-		final QuestHelperSteps.Instruction instruction = routingInstruction(step, tracker.getInstruction());
+		final QuestHelperSteps.Instruction instruction = tracker.getNavigationInstruction();
 		if (instruction != null)
 		{
 			final WorldPoint at = pointOf(instruction.getPoint());
@@ -1162,25 +1209,33 @@ public class PathTracker
 
 		// Board the transport before aiming at its arrival town. Loaded actors
 		// above still win, but an unloaded captain must not erase the dock.
-		if (step.getTravel() != null && (target == null || !target.isHighlightable())
-			&& instruction == null)
+		if (tracker.getActiveTravel() != null)
 		{
-			return said("the departure dock", step.getTravel().nearestOrigin(from));
+			return said("the departure dock", tracker.getActiveTravel().nearestOrigin(from));
 		}
 
-		// Not when they are scattered: taking the first of ninety-one
-		// coordinates spread over the world is a route to whichever one the
-		// pipeline happened to list first, drawn with the same confidence as
-		// one that is actually known.
-		if (target != null && !target.isScattered())
+		// The nearest of them, not the first.
+		//
+		// Scattered coordinates used to be refused outright, because taking the
+		// first of ninety-one deposit boxes is a route to whichever one the
+		// pipeline happened to list first. That is still true of the first, and
+		// still the right answer for the world map marker and the minimap
+		// arrow, which both go on refusing: those claim to know where the step
+		// is, and with ninety-one candidates nobody does.
+		//
+		// A line is a different claim. Every one of those coordinates is a real
+		// deposit box, and the one the player wants is the one they are nearest
+		// -- which is the same box the outline will pick out when it finally
+		// loads. Refusing meant 92 steps drew no line at all until the thing
+		// rendered, which is exactly when a line stops being needed.
+		if (target != null)
 		{
-			for (List<Integer> raw : target.getPoints())
+			final WorldPoint nearest = nearestOf(target.getPoints(), from);
+			if (nearest != null)
 			{
-				if (raw != null && raw.size() >= 3)
-				{
-					return said("the target's own coordinate",
-						new WorldPoint(raw.get(0), raw.get(1), raw.get(2)));
-				}
+				return said(target.isScattered()
+					? "the nearest of the target's coordinates"
+					: "the target's own coordinate", nearest);
 			}
 		}
 

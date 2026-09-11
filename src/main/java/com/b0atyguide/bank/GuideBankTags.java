@@ -162,7 +162,7 @@ public class GuideBankTags
 	}
 
 	/**
-	 * Every item id the bank's steps name.
+	 * Only items the guide explicitly asks to withdraw at this bank.
 	 *
 	 * <p>Includes all ids behind a category word: "Pickaxe" carries every
 	 * pickaxe, so whichever one the player owns is the one that shows.
@@ -172,6 +172,12 @@ public class GuideBankTags
 		final Set<Integer> ids = new LinkedHashSet<>();
 		for (Step step : section.getSteps())
 		{
+			// Later pickups and purchases are not supplies to bring from storage.
+			// Use the same data flag as WithdrawTracker, not a second text parser.
+			if (!step.isWithdraw())
+			{
+				continue;
+			}
 			for (ItemRef item : step.getItems())
 			{
 				ids.addAll(item.getIds());

@@ -63,11 +63,12 @@ Path's `transports.tsv`: adjacent, same-plane entries whose action begins
 `Open` or `Slash`. It supplies an unambiguous crossing direction only when a
 matching gate, door or web candidate is currently present in the live scene.
 
-Travelling steps carry Shortest Path's vehicle tables as `step.travel`. The 27
-steps that name a journey ship 106 `departures` between them, drawn from
-`ships.tsv`, `charter_ships.tsv` and `magic_carpets.tsv`: for each place the
-vehicle can be boarded, the tile, the npc or object id to click, and the menu
-wording. Route grouping comes from those files' own section headers.
+Travelling steps carry Shortest Path's vehicle tables as `step.travel`. The 57
+steps that name a journey ship 381 `departures` between them, drawn from
+`boats.tsv`, `ships.tsv`, `charter_ships.tsv`, `minecarts.tsv` and
+`magic_carpets.tsv`: for each place the vehicle can be boarded, the tile, the
+npc or object id to click, and the menu wording. Route grouping comes from
+those files' own section headers.
 
 The complete prebuilt world collision map is not shipped.
 

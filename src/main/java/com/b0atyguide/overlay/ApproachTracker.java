@@ -167,7 +167,8 @@ public class ApproachTracker
 
 		final Step step = tracker.getStep();
 		final Target target = step == null ? null : step.getTarget();
-		if (target == null || target.isScattered() || tracker.getNavigationInstruction() != null)
+		if (target == null || target.isScattered() || tracker.getNavigationInstruction() != null
+			|| tracker.getActiveTravel() != null)
 		{
 			return;
 		}

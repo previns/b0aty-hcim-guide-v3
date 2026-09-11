@@ -84,6 +84,7 @@ public class QuestHelperSteps
 		private Integer panel;
 		private List<WidgetMark> widgets;
 		private List<WidgetPuzzle> widgetPuzzles;
+		private List<CombinationLock> combinationLocks;
 		private List<Integer> ids;
 		private String text;
 		private boolean conditional;
@@ -310,6 +311,11 @@ public class QuestHelperSteps
 			return widgets == null ? Collections.emptyList() : widgets;
 		}
 
+		public List<CombinationLock> getCombinationLocks()
+		{
+			return combinationLocks == null ? Collections.emptyList() : combinationLocks;
+		}
+
 		public List<WidgetPuzzle> getWidgetPuzzles()
 		{
 			return widgetPuzzles == null ? Collections.emptyList() : widgetPuzzles;
@@ -501,6 +507,7 @@ public class QuestHelperSteps
 		private VarCheck var;
 		private Present here;
 		private Integer open;
+		private Shown widget;
 		private List<Requirement> all;
 		private List<Requirement> any;
 		private Requirement not;
@@ -512,7 +519,8 @@ public class QuestHelperSteps
 		 */
 		public boolean isMilestoneCondition()
 		{
-			if (zone != null || item != null || here != null || open != null || not != null
+			if (zone != null || item != null || here != null || open != null || widget != null
+				|| not != null
 				|| (var != null ? 1 : 0) + (all != null ? 1 : 0) + (any != null ? 1 : 0) != 1)
 			{
 				return false;
@@ -573,6 +581,10 @@ public class QuestHelperSteps
 			if (open != null)
 			{
 				return vars != null && vars.interfaceOpen(open);
+			}
+			if (widget != null)
+			{
+				return vars != null && vars.widgetShows(widget);
 			}
 			if (item != null)
 			{
@@ -680,6 +692,98 @@ public class QuestHelperSteps
 		}
 	}
 
+	/**
+	 * A row of dials showing a code, one letter each.
+	 *
+	 * <p>Quest Helper's ChestCodeStep. Kept apart from {@link WidgetPuzzle},
+	 * which solves a different puzzle with different rules -- that one reads
+	 * varbits, numbers its targets from one, and addresses each arrow by a
+	 * packed id. These dials read client ints, count targets from zero, and
+	 * are children of one lock widget. Folding them together would mean
+	 * relaxing the checks that make either of them safe.
+	 */
+	public static class CombinationLock
+	{
+		private int parent;
+		private int submit;
+		private int size;
+		private List<Dial> cycles;
+
+		/** The widget whose children are the arrows. */
+		public int getParent() { return parent; }
+		/** The Confirm button, marked once every dial is right. */
+		public int getSubmit() { return submit; }
+		/** How many letters a dial cycles through. */
+		public int getSize() { return size; }
+
+		public List<Dial> getCycles()
+		{
+			return cycles == null ? Collections.emptyList() : cycles;
+		}
+
+		public boolean isValid()
+		{
+			if (parent <= 0 || submit <= 0 || size < 2 || size > 128
+				|| getCycles().isEmpty() || getCycles().size() > 8)
+			{
+				return false;
+			}
+			for (Dial dial : getCycles())
+			{
+				if (!dial.isValid(size))
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+	}
+
+	/** One dial: where it is now, where it has to be, and the two arrows. */
+	public static class Dial
+	{
+		private int varc;
+		private int target;
+		private int down;
+		private int up;
+
+		/** The client int holding this dial's current value. */
+		public int getVarc() { return varc; }
+		/** Child index of the down arrow on the lock widget. */
+		public int getDown() { return down; }
+		/** Child index of the up arrow. */
+		public int getUp() { return up; }
+
+		public boolean isValid(int size)
+		{
+			return varc >= 0 && down >= 0 && up >= 0 && down != up
+				&& target >= 0 && target < size;
+		}
+
+		/**
+		 * The arrow to click, or -1 when this dial is already right.
+		 *
+		 * <p>QH picks whichever way round is shorter, and takes the up arrow
+		 * when the two are equal.
+		 */
+		public int arrow(int current, int size)
+		{
+			if (current == target)
+			{
+				return -1;
+			}
+			return Math.floorMod(current - target, size) < Math.floorMod(target - current, size)
+				? down : up;
+		}
+
+		/** How many clicks, by the shorter way round. */
+		public int clicks(int current, int size)
+		{
+			return Math.min(Math.floorMod(current - target, size),
+				Math.floorMod(target - current, size));
+		}
+	}
+
 	/** A WidgetHighlight's component, child selection and filters. */
 	public static class WidgetMark
 	{
@@ -781,6 +885,46 @@ public class QuestHelperSteps
 		{
 			return false;
 		}
+
+		/**
+		 * Whether an interface is showing particular words.
+		 *
+		 * <p>How Quest Helper knows a puzzle is open rather than merely
+		 * reachable. Every one of its interface solvers is guarded this way --
+		 * the chest in the Ribbiting Tale and the one in The Heart of Darkness
+		 * are both group 809, child 5, index 9, reading "Confirm" -- and until
+		 * this could be answered the branch holding the solution was dropped
+		 * before it ever reached the plugin.
+		 */
+		default boolean widgetShows(Shown shown)
+		{
+			return false;
+		}
+	}
+
+	/**
+	 * Words an interface has to be showing.
+	 *
+	 * <p>Quest Helper's WidgetTextRequirement: find the widget, optionally step
+	 * into one of its children, and test whether its text contains any of these.
+	 * A hidden widget never counts, which is what stops a menu that exists but
+	 * is not on screen from answering yes.
+	 */
+	public static class Shown
+	{
+		private int group;
+		private int child;
+		private Integer index;
+		private List<String> text;
+		private boolean children;
+
+		public int getGroup() { return group; }
+		public int getChild() { return child; }
+		/** The child of the child to read, or null for the widget itself. */
+		public Integer getIndex() { return index; }
+		public List<String> getText() { return text == null ? Collections.emptyList() : text; }
+		/** Whether to search the widget's static children as well. */
+		public boolean isChildren() { return children; }
 	}
 
 	/**
