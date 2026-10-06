@@ -1,3 +1,10 @@
+# 1.3.1 ? Performance and travel completion
+
+- Batch variable-driven completion checks once per game tick and preserve the route cache when scenery transforms have not changed.
+- Resolve travel completion after destination and transport data, correcting the Grand Tree floor and adding plain teleport and home-teleport steps.
+- Keep compound, conditional, quest and diary instructions out of proximity completion.
+- Add a sidebar action to request the selected destination from the optional Shortest Path plugin.
+
 # 1.3.0 — Quest puzzles and routing
 
 - Show Quest Helper's puzzle answers instead of its "turn on solutions" message: chest codes, door passwords, the stone order on Death Plateau, which guards to mark in Children of the Sun.

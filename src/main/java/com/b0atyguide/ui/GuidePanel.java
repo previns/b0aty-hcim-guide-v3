@@ -48,6 +48,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
+import javax.swing.JButton;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -106,6 +107,19 @@ public class GuidePanel extends PluginPanel
 	 * Hidden until a step is current, since it has nothing to point at.
 	 */
 	private final JLabel episodeLink = new JLabel();
+	private final JButton shortestPathButton = new JButton("Route with Shortest Path");
+	private Runnable onShortestPath;
+
+	public void setShortestPathAction(Runnable action)
+	{
+		onShortestPath = action;
+		shortestPathButton.setEnabled(action != null);
+	}
+
+	public void showRouteStatus(String message)
+	{
+		SwingUtilities.invokeLater(() -> shortestPathButton.setToolTipText(message));
+	}
 
 	/**
 	 * "Wiki guide updated 31 Aug 2026". The guide ships with the plugin, so
@@ -379,6 +393,15 @@ public class GuidePanel extends PluginPanel
 		header.add(episodeLink);
 		header.add(Box.createVerticalStrut(2));
 		header.add(updatedLabel);
+		header.add(Box.createVerticalStrut(4));
+		shortestPathButton.setAlignmentX(LEFT_ALIGNMENT);
+		shortestPathButton.setEnabled(false);
+		shortestPathButton.setToolTipText("Route to the selected step. Requires the Shortest Path plugin to be enabled.");
+		shortestPathButton.addActionListener(event ->
+		{
+			if (onShortestPath != null) { onShortestPath.run(); }
+		});
+		header.add(shortestPathButton);
 		return header;
 	}
 
@@ -604,6 +627,7 @@ public class GuidePanel extends PluginPanel
 		guide = null;
 		progress = null;
 		currentStep = null;
+		setShortestPathAction(null);
 		images = null;
 		onToggle = null;
 		onSelect = null;

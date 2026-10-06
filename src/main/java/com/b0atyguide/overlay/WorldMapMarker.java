@@ -72,8 +72,6 @@ public class WorldMapMarker
 
 	private final List<GuideWorldMapPoint> placed = new ArrayList<>();
 
-	/** The instruction the current step was chosen with, or null. */
-	private QuestHelperSteps.Instruction chosen;
 
 	/** Put the marker where this step happens, or take it away. */
 	public void setStep(Step step)
@@ -91,14 +89,13 @@ public class WorldMapMarker
 	 */
 	public void setStep(Step step, QuestHelperSteps.Instruction instruction)
 	{
-		chosen = instruction;
 		clear();
 		if (!config.showWorldMapPoint() || step == null)
 		{
 			return;
 		}
 
-		final List<WorldPoint> points = locate(step);
+		final List<WorldPoint> points = locate(step, instruction);
 		if (points.isEmpty())
 		{
 			return;
@@ -153,7 +150,7 @@ public class WorldMapMarker
 	 * step that says "Bank at Edgeville" wants the bank, not the banker who
 	 * happens to be the extracted target.
 	 */
-	private List<WorldPoint> locate(Step step)
+	public static List<WorldPoint> locate(Step step, QuestHelperSteps.Instruction chosen)
 	{
 		// Quest Helper first, unless the step names something of its own. Its
 		// coordinate is the tile this step of the quest is waiting on, and the

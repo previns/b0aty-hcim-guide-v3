@@ -1104,11 +1104,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3103,
-      3265,
-      0
-     ],
      "destination": {
       "name": "Draynor",
       "points": [
@@ -1123,7 +1118,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Draynor Village"
-     }
+     },
+     "arrivesAt": [
+      3103,
+      3265,
+      0
+     ]
     },
     {
      "id": "ce4913f789",
@@ -1214,11 +1214,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3109,
-      3160,
-      0
-     ],
      "destination": {
       "name": "Wizards' Tower",
       "points": [
@@ -1233,7 +1228,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3114,
+      3181,
+      0
+     ]
     },
     {
      "id": "a778106253",
@@ -1855,11 +1855,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      1803,
-      3752,
-      0
-     ],
      "destination": {
       "name": "Port Piscarilius",
       "points": [
@@ -1874,7 +1869,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Port Piscarilius"
-     }
+     },
+     "arrivesAt": [
+      1803,
+      3752,
+      0
+     ]
     },
     {
      "id": "2611bf97b9",
@@ -1958,11 +1958,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      1590,
-      3620,
-      0
-     ],
      "travel": {
       "place": "Shayzien East",
       "kind": "minecarts",
@@ -2148,7 +2143,12 @@
      "destination": {
       "name": "Shayzien East",
       "points": []
-     }
+     },
+     "arrivesAt": [
+      1590,
+      3620,
+      0
+     ]
     },
     {
      "id": "a2f6e1e60a",
@@ -2438,7 +2438,12 @@
      "spell": {
       "name": "TELEPORT_HOME_STANDARD",
       "widget": 14286854
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "aaa3cbda2a",
@@ -4183,11 +4188,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3298,
-      3518,
-      0
-     ],
      "destination": {
       "name": "Lumber Yard",
       "points": [
@@ -4202,7 +4202,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Lumber Yard"
-     }
+     },
+     "arrivesAt": [
+      3298,
+      3518,
+      0
+     ]
     },
     {
      "id": "8cb2f6d1a2",
@@ -4848,11 +4853,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      1559,
-      3048,
-      0
-     ],
      "destination": {
       "name": "Hunter's Guild",
       "points": [
@@ -4867,7 +4867,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Hunter Guild"
-     }
+     },
+     "arrivesAt": [
+      1559,
+      3048,
+      0
+     ]
     },
     {
      "id": "f16cb5535a",
@@ -5963,7 +5968,12 @@
      "spell": {
       "name": "TELEPORT_HOME_STANDARD",
       "widget": 14286854
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "bc89942abe",
@@ -5990,11 +6000,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3109,
-      3160,
-      0
-     ],
      "destination": {
       "name": "Wizards' Tower",
       "points": [
@@ -6009,7 +6014,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3114,
+      3181,
+      0
+     ]
     },
     {
      "id": "339e0a4859",
@@ -7456,11 +7466,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3052,
-      3250,
-      0
-     ],
      "destination": {
       "name": "Redbeard Frank",
       "points": []
@@ -8857,11 +8862,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3080,
-      3492,
-      0
-     ],
      "destination": {
       "name": "Edgeville",
       "points": [
@@ -8876,7 +8876,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3087,
+      3496,
+      0
+     ]
     },
     {
      "id": "0c1b056848",
@@ -8987,11 +8992,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2466,
-      3492,
-      1
-     ],
      "destination": {
       "name": "Grand Tree",
       "points": [
@@ -9019,7 +9019,12 @@
       ],
       "constant": "LADDER",
       "source": "quest-helper/thegrandtree"
-     }
+     },
+     "arrivesAt": [
+      2465,
+      3495,
+      0
+     ]
     },
     {
      "id": "f0e1191175",
@@ -9537,7 +9542,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2915,
+      3225,
+      0
+     ]
     },
     {
      "id": "104db89361",
@@ -9607,11 +9617,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3029,
-      3221,
-      0
-     ],
      "destination": {
       "name": "Port Sarim",
       "points": [
@@ -9626,7 +9631,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Port Sarim"
-     }
+     },
+     "arrivesAt": [
+      3029,
+      3221,
+      0
+     ]
     },
     {
      "id": "82820d8d9a",
@@ -9913,7 +9923,12 @@
      "spell": {
       "name": "TELEPORT_HOME_STANDARD",
       "widget": 14286854
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "1aa1ed17ff",
@@ -9940,11 +9955,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3290,
-      3185,
-      1
-     ],
      "destination": {
       "name": "Al Kharid",
       "points": [
@@ -9959,7 +9969,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3293,
+      3163,
+      0
+     ]
     },
     {
      "id": "bb4abf23e4",
@@ -10090,11 +10105,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3304,
-      3123,
-      0
-     ],
      "destination": {
       "name": "Shantay Pass",
       "points": [
@@ -10109,7 +10119,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Shantay Pass"
-     }
+     },
+     "arrivesAt": [
+      3304,
+      3123,
+      0
+     ]
     },
     {
      "id": "f2c761badf",
@@ -11021,11 +11036,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2577,
-      3090,
-      2
-     ],
      "destination": {
       "name": "Yanille",
       "points": [
@@ -11040,7 +11050,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2544,
+      3095,
+      0
+     ]
     },
     {
      "id": "1363dba5ff",
@@ -11478,11 +11493,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2653,
-      3159,
-      0
-     ],
      "destination": {
       "name": "Port Khazard",
       "points": [
@@ -11497,7 +11507,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Port Khazard"
-     }
+     },
+     "arrivesAt": [
+      2653,
+      3159,
+      0
+     ]
     },
     {
      "id": "c8bb85d20b",
@@ -12750,7 +12765,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2520,
+      3571,
+      0
+     ]
     },
     {
      "id": "7673ce2d62",
@@ -13035,11 +13055,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2570,
-      3300,
-      0
-     ],
      "destination": {
       "name": "Ardougne",
       "points": [
@@ -13054,7 +13069,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "f74f45be54",
@@ -13083,11 +13103,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2574,
-      3323,
-      0
-     ],
      "destination": {
       "name": "Bartender (Flying Horse Inn)",
       "points": []
@@ -14346,11 +14361,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2577,
-      3090,
-      2
-     ],
      "destination": {
       "name": "Yanille",
       "points": [
@@ -14365,7 +14375,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2544,
+      3095,
+      0
+     ]
     },
     {
      "id": "202705c994",
@@ -14592,11 +14607,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2570,
-      3300,
-      0
-     ],
      "destination": {
       "name": "Ardougne",
       "points": [
@@ -14617,6 +14627,11 @@
        "tag": "Karamja Easy Diary",
        "diary": true
       }
+     ],
+     "arrivesAt": [
+      2664,
+      3306,
+      0
      ]
     },
     {
@@ -16946,7 +16961,12 @@
      "spell": {
       "name": "TELEPORT_HOME_STANDARD",
       "widget": 14286854
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "79d4eff1dd",
@@ -19547,11 +19567,6 @@
       "confidence": "manual",
       "scattered": false
      },
-     "arrivesAt": [
-      1580,
-      3120,
-      0
-     ],
      "destination": {
       "name": "Varlamore",
       "points": [
@@ -19566,7 +19581,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Varlamore"
-     }
+     },
+     "arrivesAt": [
+      1580,
+      3120,
+      0
+     ]
     },
     {
      "id": "edee7ac60d",
@@ -19900,11 +19920,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      1391,
-      2935,
-      0
-     ],
      "destination": {
       "name": "Aldarin",
       "points": [
@@ -19919,7 +19934,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      1422,
+      2966,
+      0
+     ]
     },
     {
      "id": "7a5999f2a0",
@@ -20309,11 +20329,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2809,
-      3194,
-      0
-     ],
      "destination": {
       "name": "Brimhaven Agility Arena",
       "points": [
@@ -22282,11 +22297,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2814,
-      3443,
-      0
-     ],
      "destination": {
       "name": "Catherby",
       "points": [
@@ -22301,7 +22311,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2802,
+      3449,
+      0
+     ]
     },
     {
      "id": "a8bb1ceeeb",
@@ -22415,7 +22430,12 @@
      "spell": {
       "name": "TELEPORT_HOME_STANDARD",
       "widget": 14286854
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "d54625ab38",
@@ -22442,11 +22462,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3290,
-      3185,
-      1
-     ],
      "destination": {
       "name": "Al Kharid",
       "points": [
@@ -22461,7 +22476,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3293,
+      3163,
+      0
+     ]
     },
     {
      "id": "d162025d82",
@@ -22989,11 +23009,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3304,
-      3123,
-      0
-     ],
      "destination": {
       "name": "Shantay Pass",
       "points": [
@@ -23008,7 +23023,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Shantay Pass"
-     }
+     },
+     "arrivesAt": [
+      3304,
+      3123,
+      0
+     ]
     }
    ]
   },
@@ -23923,7 +23943,12 @@
      "spell": {
       "name": "TELEPORT_HOME_STANDARD",
       "widget": 14286854
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "122424ca4d",
@@ -23950,11 +23975,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3304,
-      3123,
-      0
-     ],
      "destination": {
       "name": "Shantay Pass",
       "points": [
@@ -23969,7 +23989,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Shantay Pass"
-     }
+     },
+     "arrivesAt": [
+      3304,
+      3123,
+      0
+     ]
     },
     {
      "id": "fba51363fc",
@@ -24007,11 +24032,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3358,
-      2974,
-      0
-     ],
      "destination": {
       "name": "Pollnivneach",
       "points": [
@@ -24026,7 +24046,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3340,
+      3004,
+      0
+     ]
     },
     {
      "id": "c4ecd0ff34",
@@ -24540,11 +24565,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3290,
-      3185,
-      1
-     ],
      "destination": {
       "name": "Al Kharid",
       "points": [
@@ -24559,7 +24579,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3293,
+      3163,
+      0
+     ]
     },
     {
      "id": "a193b9a674",
@@ -25157,11 +25182,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3358,
-      2974,
-      0
-     ],
      "destination": {
       "name": "Pollnivneach",
       "points": [
@@ -25176,7 +25196,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3340,
+      3004,
+      0
+     ]
     },
     {
      "id": "07cb234767",
@@ -27123,7 +27148,12 @@
      "spell": {
       "name": "CAMELOT_TELEPORT",
       "widget": 14286885
-     }
+     },
+     "arrivesAt": [
+      2757,
+      3477,
+      0
+     ]
     },
     {
      "id": "beebe5e729",
@@ -27461,7 +27491,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "c093da4569",
@@ -29185,7 +29220,12 @@
      "spell": {
       "name": "TELEPORT_HOME_STANDARD",
       "widget": 14286854
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "9b0100720a",
@@ -30041,11 +30081,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2834,
-      3331,
-      1
-     ],
      "completion": {
       "varplayer": 1186,
       "varplayerName": "FALADOR_ACHIEVEMENT_DIARY",
@@ -30681,7 +30716,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "067afc654c",
@@ -30991,7 +31031,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "0726a2f11d",
@@ -31080,7 +31125,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "cb67377acd",
@@ -31661,11 +31711,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3103,
-      3265,
-      0
-     ],
      "destination": {
       "name": "Draynor",
       "points": [
@@ -31680,7 +31725,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Draynor Village"
-     }
+     },
+     "arrivesAt": [
+      3103,
+      3265,
+      0
+     ]
     }
    ]
   },
@@ -32120,7 +32170,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "1612d7d650",
@@ -32436,7 +32491,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "6f835c117c",
@@ -34301,7 +34361,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "ee1340502a",
@@ -34621,7 +34686,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "8dffbd7f03",
@@ -34683,7 +34753,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "e572f21d0b",
@@ -35588,7 +35663,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "8bd544a8f6",
@@ -37542,11 +37622,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3091,
-      3500,
-      0
-     ],
      "destination": {
       "name": "Edgeville Bank",
       "points": [
@@ -37561,7 +37636,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Edgeville bank"
-     }
+     },
+     "arrivesAt": [
+      3091,
+      3500,
+      0
+     ]
     },
     {
      "id": "a43c5df4a8",
@@ -37805,7 +37885,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Ardougne"
-     }
+     },
+     "arrivesAt": [
+      2570,
+      3300,
+      0
+     ]
     },
     {
      "id": "fcfa1d779a",
@@ -38869,7 +38954,12 @@
      "spell": {
       "name": "CAMELOT_TELEPORT",
       "widget": 14286885
-     }
+     },
+     "arrivesAt": [
+      2757,
+      3477,
+      0
+     ]
     },
     {
      "id": "7461d7e5c1",
@@ -39222,7 +39312,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "c80a0ab461",
@@ -40152,11 +40247,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      1249,
-      3737,
-      0
-     ],
      "destination": {
       "name": "Farming Guild",
       "points": [
@@ -40171,7 +40261,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      1249,
+      3717,
+      0
+     ]
     },
     {
      "id": "87af6eecb9",
@@ -40891,7 +40986,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "15815b5909",
@@ -40918,11 +41018,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3108,
-      3358,
-      0
-     ],
      "destination": {
       "name": "Draynor Manor",
       "points": [
@@ -40937,7 +41032,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3108,
+      3352,
+      0
+     ]
     },
     {
      "id": "bcddd26d46",
@@ -41029,7 +41129,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "8f3c790efc",
@@ -41080,7 +41185,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2772,
+      3234,
+      0
+     ]
     },
     {
      "id": "9cf3457fbf",
@@ -41883,7 +41993,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "71a2a30aef",
@@ -42091,11 +42206,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3080,
-      3427,
-      0
-     ],
      "destination": {
       "name": "Barbarian Village",
       "points": [
@@ -42110,7 +42220,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Barbarian Village"
-     }
+     },
+     "arrivesAt": [
+      3080,
+      3427,
+      0
+     ]
     },
     {
      "id": "473f58ccc1",
@@ -42855,7 +42970,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "72d3765c0b",
@@ -43549,7 +43669,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "c5651c2d6b",
@@ -43695,7 +43820,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "7144756e0c",
@@ -43791,7 +43921,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "95ccb066b5",
@@ -44202,7 +44337,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "7ac633e7d0",
@@ -44441,11 +44581,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2884,
-      3398,
-      0
-     ],
      "destination": {
       "name": "Taverley Dungeon",
       "points": [
@@ -44570,7 +44705,12 @@
      "spell": {
       "name": "CAMELOT_TELEPORT",
       "widget": 14286885
-     }
+     },
+     "arrivesAt": [
+      2757,
+      3477,
+      0
+     ]
     },
     {
      "id": "99ac3d8c0a",
@@ -44938,11 +45078,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2658,
-      3677,
-      0
-     ],
      "destination": {
       "name": "Relleka",
       "points": [
@@ -44957,7 +45092,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Rellekka"
-     }
+     },
+     "arrivesAt": [
+      2658,
+      3677,
+      0
+     ]
     },
     {
      "id": "9c5a95a22f",
@@ -45679,7 +45819,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2520,
+      3571,
+      0
+     ]
     },
     {
      "id": "9dfa1e4184",
@@ -46637,7 +46782,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2441,
+      3091,
+      0
+     ]
     },
     {
      "id": "1e5c2233b1",
@@ -46738,7 +46888,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "8e875a877f",
@@ -46902,11 +47057,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3480,
-      3095,
-      0
-     ],
      "destination": {
       "name": "Ruins of Uzer",
       "points": [
@@ -46922,6 +47072,11 @@
       "ambiguous": false,
       "source": "wiki/Ruins of Uzer"
      },
+     "arrivesAt": [
+      3480,
+      3095,
+      0
+     ],
      "questContext": "shadowofthestorm"
     },
     {
@@ -47225,7 +47380,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "d12d78b82d",
@@ -47370,7 +47530,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "c2657570f4",
@@ -47652,7 +47817,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "2bb9ae19dc",
@@ -47764,7 +47934,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2772,
+      3234,
+      0
+     ]
     },
     {
      "id": "92e1d8872d",
@@ -47855,7 +48030,12 @@
      "spell": {
       "name": "CAMELOT_TELEPORT",
       "widget": 14286885
-     }
+     },
+     "arrivesAt": [
+      2757,
+      3477,
+      0
+     ]
     }
    ]
   },
@@ -48194,7 +48374,12 @@
      "spell": {
       "name": "CAMELOT_TELEPORT",
       "widget": 14286885
-     }
+     },
+     "arrivesAt": [
+      2757,
+      3477,
+      0
+     ]
     }
    ]
   },
@@ -48318,7 +48503,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "f2586e8199",
@@ -48819,7 +49009,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "c8b3021bf3",
@@ -49060,11 +49255,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3021,
-      3452,
-      0
-     ],
      "destination": {
       "name": "Rolad",
       "points": []
@@ -49157,7 +49347,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "847c3c56ab",
@@ -49234,7 +49429,12 @@
      "spell": {
       "name": "TELEPORT_HOME_STANDARD",
       "widget": 14286854
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     }
    ]
   },
@@ -50390,11 +50590,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3806,
-      3549,
-      0
-     ],
      "destination": {
       "name": "Dragontooth Island",
       "points": [
@@ -50416,6 +50611,11 @@
        "diary": true,
        "asWritten": "Morytania Medum Diary"
       }
+     ],
+     "arrivesAt": [
+      3806,
+      3549,
+      0
      ]
     },
     {
@@ -50461,11 +50661,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3679,
-      3486,
-      0
-     ],
      "destination": {
       "name": "Port Phasmatys",
       "points": [
@@ -50480,7 +50675,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Port Phasmatys"
-     }
+     },
+     "arrivesAt": [
+      3679,
+      3486,
+      0
+     ]
     },
     {
      "id": "84b88caee0",
@@ -51354,7 +51554,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "305025b577",
@@ -51381,11 +51586,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3080,
-      3427,
-      0
-     ],
      "destination": {
       "name": "Barbarian Village",
       "points": [
@@ -51400,7 +51600,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Barbarian Village"
-     }
+     },
+     "arrivesAt": [
+      3080,
+      3427,
+      0
+     ]
     },
     {
      "id": "722b23b8b1",
@@ -52163,7 +52368,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "cc9791cbe7",
@@ -52414,11 +52624,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3427,
-      2911,
-      0
-     ],
      "destination": {
       "name": "Nardah",
       "points": [
@@ -52433,7 +52638,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3425,
+      2928,
+      0
+     ]
     },
     {
      "id": "aad78aa76a",
@@ -52973,7 +53183,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "564e129e72",
@@ -53368,11 +53583,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3493,
-      3488,
-      0
-     ],
      "destination": {
       "name": "Canifis",
       "points": [
@@ -53387,7 +53597,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Canifis"
-     }
+     },
+     "arrivesAt": [
+      3493,
+      3488,
+      0
+     ]
     },
     {
      "id": "82f20bd0b8",
@@ -53507,11 +53722,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3487,
-      3288,
-      0
-     ],
      "destination": {
       "name": "Morton",
       "points": [
@@ -53526,7 +53736,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Mort'ton"
-     }
+     },
+     "arrivesAt": [
+      3487,
+      3288,
+      0
+     ]
     },
     {
      "id": "5a220aa27e",
@@ -53715,11 +53930,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3567,
-      3291,
-      0
-     ],
      "destination": {
       "name": "Barrows",
       "points": [
@@ -53734,7 +53944,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3565,
+      3315,
+      0
+     ]
     },
     {
      "id": "2288d02b9b",
@@ -54378,7 +54593,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "757f2796c8",
@@ -54576,7 +54796,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "0ea91b969b",
@@ -54842,11 +55067,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3103,
-      3265,
-      0
-     ],
      "destination": {
       "name": "Draynor",
       "points": [
@@ -54861,7 +55081,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Draynor Village"
-     }
+     },
+     "arrivesAt": [
+      3103,
+      3265,
+      0
+     ]
     },
     {
      "id": "fddf27bc2c",
@@ -55598,11 +55823,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3080,
-      3492,
-      0
-     ],
      "destination": {
       "name": "Edgeville",
       "points": [
@@ -55617,7 +55837,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3087,
+      3496,
+      0
+     ]
     },
     {
      "id": "1b3321d411",
@@ -55979,7 +56204,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "3cd02edcc5",
@@ -56121,7 +56351,12 @@
      "spell": {
       "name": "CAMELOT_TELEPORT",
       "widget": 14286885
-     }
+     },
+     "arrivesAt": [
+      2757,
+      3477,
+      0
+     ]
     },
     {
      "id": "6c58fbed3d",
@@ -56831,7 +57066,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3315,
+      3235,
+      0
+     ]
     },
     {
      "id": "94233c925b",
@@ -56999,7 +57239,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "e1bc3b4685",
@@ -57203,7 +57448,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "bff379d5be",
@@ -58266,7 +58516,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "b68fbb32da",
@@ -58449,7 +58704,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "92a6cb5f1a",
@@ -58538,7 +58798,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "d5a2d20554",
@@ -58602,7 +58867,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "071c3b2cc4",
@@ -58711,7 +58981,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3315,
+      3235,
+      0
+     ]
     },
     {
      "id": "42c7c65604",
@@ -58797,7 +59072,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "9e42700ffd",
@@ -59005,11 +59285,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3275,
-      3507,
-      0
-     ],
      "destination": {
       "name": "Jolly Boar Inn",
       "points": [
@@ -59024,7 +59299,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Jolly Boar Inn"
-     }
+     },
+     "arrivesAt": [
+      3275,
+      3507,
+      0
+     ]
     },
     {
      "id": "c0b8b1de64",
@@ -59215,7 +59495,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "509219e1c2",
@@ -59590,11 +59875,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2615,
-      3272,
-      0
-     ],
      "destination": {
       "name": "Ardougne Zoo",
       "points": [
@@ -59609,7 +59889,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Ardougne Zoo"
-     }
+     },
+     "arrivesAt": [
+      2615,
+      3272,
+      0
+     ]
     },
     {
      "id": "c89ebbe8bd",
@@ -59838,7 +60123,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "1eece49f9c",
@@ -60555,7 +60845,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "26e2ec6a15",
@@ -60702,11 +60997,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2879,
-      10176,
-      0
-     ],
      "destination": {
       "name": "Keldagrim",
       "points": [
@@ -60721,7 +61011,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Keldagrim"
-     }
+     },
+     "arrivesAt": [
+      2879,
+      10176,
+      0
+     ]
     },
     {
      "id": "157ecc6f92",
@@ -61017,7 +61312,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "3e180b11d7",
@@ -61364,11 +61664,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2910,
-      3451,
-      0
-     ],
      "destination": {
       "name": "Taverley",
       "points": [
@@ -61383,7 +61678,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2894,
+      3465,
+      0
+     ]
     },
     {
      "id": "6e63d7d2bf",
@@ -61467,7 +61767,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "dcc0604e35",
@@ -61578,7 +61883,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "d6e153e990",
@@ -62005,7 +62315,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "e42d1c5192",
@@ -62087,7 +62402,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "7f6339ccca",
@@ -62267,7 +62587,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3315,
+      3235,
+      0
+     ]
     },
     {
      "id": "dcbee92c3b",
@@ -62774,11 +63099,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3172,
-      2912,
-      0
-     ],
      "destination": {
       "name": "Quarry",
       "points": [
@@ -62793,7 +63113,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Quarry"
-     }
+     },
+     "arrivesAt": [
+      3172,
+      2912,
+      0
+     ]
     },
     {
      "id": "a4bb180b0b",
@@ -62971,11 +63296,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2906,
-      3537,
-      0
-     ],
      "destination": {
       "name": "Rogues Den",
       "points": [
@@ -62990,7 +63310,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/MinigameLocation"
-     }
+     },
+     "arrivesAt": [
+      2905,
+      3537,
+      0
+     ]
     },
     {
      "id": "9edcf10e11",
@@ -63031,11 +63356,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3080,
-      3492,
-      0
-     ],
      "destination": {
       "name": "Edgeville",
       "points": [
@@ -63050,7 +63370,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3087,
+      3496,
+      0
+     ]
     },
     {
      "id": "00e95411a9",
@@ -63877,7 +64202,12 @@
      "spell": {
       "name": "KOUREND_TELEPORT",
       "widget": 14286887
-     }
+     },
+     "arrivesAt": [
+      1628,
+      3673,
+      0
+     ]
     },
     {
      "id": "529f4bfebd",
@@ -64824,6 +65154,11 @@
       [
        7
       ]
+     ],
+     "arrivesAt": [
+      1518,
+      3733,
+      0
      ]
     },
     {
@@ -66633,7 +66968,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      1643,
+      3672,
+      0
+     ]
     },
     {
      "id": "e5bcaa4af0",
@@ -67098,7 +67438,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "31b65edb5d",
@@ -67346,7 +67691,12 @@
      "spell": {
       "name": "CAMELOT_TELEPORT",
       "widget": 14286885
-     }
+     },
+     "arrivesAt": [
+      2757,
+      3477,
+      0
+     ]
     },
     {
      "id": "02783d4a46",
@@ -67984,7 +68334,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "2df942727f",
@@ -68018,11 +68373,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2884,
-      3398,
-      0
-     ],
      "destination": {
       "name": "Taverley Dungeon",
       "points": [
@@ -68114,11 +68464,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2906,
-      9691,
-      0
-     ],
      "destination": {
       "name": "Black Knights Base",
       "points": [
@@ -68133,7 +68478,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Black Knights' Base"
-     }
+     },
+     "arrivesAt": [
+      2906,
+      9691,
+      0
+     ]
     },
     {
      "id": "cdf2ef0433",
@@ -68513,7 +68863,12 @@
      "spell": {
       "name": "CAMELOT_TELEPORT",
       "widget": 14286885
-     }
+     },
+     "arrivesAt": [
+      2757,
+      3477,
+      0
+     ]
     },
     {
      "id": "b6082b3121",
@@ -68540,11 +68895,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2701,
-      3410,
-      0
-     ],
      "destination": {
       "name": "Sorcerer's Tower",
       "points": [
@@ -68559,7 +68909,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Sorcerer's Tower"
-     }
+     },
+     "arrivesAt": [
+      2701,
+      3410,
+      0
+     ]
     },
     {
      "id": "deec8a3ae4",
@@ -69128,11 +69483,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2837,
-      3518,
-      0
-     ],
      "destination": {
       "name": "Ice Queen",
       "points": []
@@ -69209,7 +69559,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "b268d25558",
@@ -69479,7 +69834,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "830b71b018",
@@ -69681,11 +70041,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2772,
-      3234,
-      0
-     ],
      "travel": {
       "place": "Brimhaven",
       "kind": "ships",
@@ -69729,7 +70084,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2772,
+      3234,
+      0
+     ]
     },
     {
      "id": "26a8b99a23",
@@ -69858,7 +70218,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "409db6f647",
@@ -71161,7 +71526,12 @@
      "spell": {
       "name": "CAMELOT_TELEPORT",
       "widget": 14286885
-     }
+     },
+     "arrivesAt": [
+      2757,
+      3477,
+      0
+     ]
     },
     {
      "id": "f1b12ce4c7",
@@ -71251,7 +71621,12 @@
      "spell": {
       "name": "CAMELOT_TELEPORT",
       "widget": 14286885
-     }
+     },
+     "arrivesAt": [
+      2757,
+      3477,
+      0
+     ]
     },
     {
      "id": "3d434d5863",
@@ -71611,7 +71986,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "2754598caa",
@@ -71754,7 +72134,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "9dc90b1307",
@@ -72643,7 +73028,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "23872ca046",
@@ -72995,7 +73385,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "53ff238006",
@@ -73333,7 +73728,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "af96cb4121",
@@ -74130,7 +74530,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "56aa9f923b",
@@ -75690,7 +76095,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "829825de09",
@@ -76005,7 +76415,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2898,
+      3554,
+      0
+     ]
     },
     {
      "id": "8d7d801c64",
@@ -77284,7 +77699,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3315,
+      3235,
+      0
+     ]
     },
     {
      "id": "56b312927c",
@@ -77686,7 +78106,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3348,
+      2942,
+      0
+     ]
     },
     {
      "id": "8f72157114",
@@ -78282,11 +78707,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2834,
-      3331,
-      1
-     ],
      "travel": {
       "place": "Entrana",
       "kind": "ships",
@@ -78321,7 +78741,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Entrana"
-     }
+     },
+     "arrivesAt": [
+      2834,
+      3331,
+      1
+     ]
     },
     {
      "id": "4412c0e575",
@@ -78398,11 +78823,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3029,
-      3221,
-      0
-     ],
      "destination": {
       "name": "Port Sarim",
       "points": [
@@ -78417,7 +78837,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Port Sarim"
-     }
+     },
+     "arrivesAt": [
+      3029,
+      3221,
+      0
+     ]
     },
     {
      "id": "3fab51df84",
@@ -78617,7 +79042,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "4e726a07c3",
@@ -78823,11 +79253,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2834,
-      3331,
-      1
-     ],
      "travel": {
       "place": "Entrana",
       "kind": "ships",
@@ -78862,7 +79287,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Entrana"
-     }
+     },
+     "arrivesAt": [
+      2834,
+      3331,
+      1
+     ]
     },
     {
      "id": "78f058f40a",
@@ -78892,7 +79322,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Lumber Yard"
-     }
+     },
+     "arrivesAt": [
+      3298,
+      3518,
+      0
+     ]
     },
     {
      "id": "630a23f904",
@@ -79048,7 +79483,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "1c0d644d5c",
@@ -79287,11 +79727,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3080,
-      3427,
-      0
-     ],
      "destination": {
       "name": "Barbarian Village",
       "points": [
@@ -79306,7 +79741,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Barbarian Village"
-     }
+     },
+     "arrivesAt": [
+      3080,
+      3427,
+      0
+     ]
     },
     {
      "id": "5636b97737",
@@ -79384,7 +79824,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "7480b56d23",
@@ -79480,7 +79925,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "b6c5eada6c",
@@ -79553,7 +80003,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "78ffa161a6",
@@ -80881,11 +81336,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2544,
-      3761,
-      0
-     ],
      "travel": {
       "place": "Waterbirth Island",
       "kind": "boats",
@@ -80920,7 +81370,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2544,
+      3761,
+      0
+     ]
     },
     {
      "id": "a4ab43308b",
@@ -81764,7 +82219,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "3761ed8759",
@@ -82091,7 +82551,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "51857dfe4b",
@@ -82180,7 +82645,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "ce775cbcd8",
@@ -82313,7 +82783,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "e087004b89",
@@ -83075,11 +83550,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2803,
-      2706,
-      0
-     ],
      "travel": {
       "place": "Ape Atoll",
       "kind": "boats",
@@ -83120,6 +83590,11 @@
       "ambiguous": true,
       "source": "runelite/TeleportLocationData"
      },
+     "arrivesAt": [
+      2803,
+      2706,
+      0
+     ],
      "questContext": "monkeymadnessi"
     },
     {
@@ -83568,7 +84043,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "150f554dcc",
@@ -83647,7 +84127,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "212a2b4be3",
@@ -84608,7 +85093,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2441,
+      3091,
+      0
+     ]
     },
     {
      "id": "d3b5cc3a75",
@@ -84635,11 +85125,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2577,
-      3090,
-      2
-     ],
      "destination": {
       "name": "Yanille",
       "points": [
@@ -84654,7 +85139,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2544,
+      3095,
+      0
+     ]
     },
     {
      "id": "26fcb24ce4",
@@ -85117,11 +85607,6 @@
       "pointSource": "quest-helper",
       "scattered": false
      },
-     "arrivesAt": [
-      2570,
-      2975,
-      0
-     ],
      "destination": {
       "name": "Ogres",
       "points": []
@@ -85558,7 +86043,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2772,
+      3234,
+      0
+     ]
     },
     {
      "id": "2ffb680766",
@@ -85686,7 +86176,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2441,
+      3091,
+      0
+     ]
     },
     {
      "id": "96ab8f8e6d",
@@ -85719,11 +86214,6 @@
       "pointSource": "quest-helper",
       "scattered": false
      },
-     "arrivesAt": [
-      2570,
-      2975,
-      0
-     ],
      "destination": {
       "name": "Ogres",
       "points": []
@@ -85913,11 +86403,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2547,
-      3115,
-      2
-     ],
      "destination": {
       "name": "Watchtower Wizard",
       "points": []
@@ -86577,7 +87062,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2441,
+      3091,
+      0
+     ]
     }
    ]
   },
@@ -86899,11 +87389,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2577,
-      3090,
-      2
-     ],
      "destination": {
       "name": "Yanille",
       "points": [
@@ -86918,7 +87403,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2544,
+      3095,
+      0
+     ]
     },
     {
      "id": "18e6be7737",
@@ -87134,7 +87624,12 @@
      "teleport": {
       "via": "Run South to Land's End",
       "ids": []
-     }
+     },
+     "arrivesAt": [
+      3029,
+      3217,
+      0
+     ]
     },
     {
      "id": "4ce6a2cdb5",
@@ -87161,11 +87656,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2834,
-      3331,
-      1
-     ],
      "travel": {
       "place": "Entrana",
       "kind": "ships",
@@ -87200,7 +87690,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Entrana"
-     }
+     },
+     "arrivesAt": [
+      2834,
+      3331,
+      1
+     ]
     },
     {
      "id": "5d19f7c985",
@@ -87248,7 +87743,12 @@
      "spell": {
       "name": "WATCHTOWER_TELEPORT",
       "widget": 14286898
-     }
+     },
+     "arrivesAt": [
+      2547,
+      3114,
+      0
+     ]
     },
     {
      "id": "443f363e7f",
@@ -87581,7 +88081,12 @@
      "spell": {
       "name": "TELEPORT_HOME_STANDARD",
       "widget": 14286854
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     }
    ]
   },
@@ -88121,7 +88626,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "a1c85bbea6",
@@ -88309,7 +88819,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "9076cdd8e8",
@@ -89247,7 +89762,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "19c3f018cc",
@@ -89303,7 +89823,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Outpost"
-     }
+     },
+     "arrivesAt": [
+      2437,
+      3346,
+      0
+     ]
     },
     {
      "id": "ddf416b7ce",
@@ -89589,7 +90114,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "f3f8e63753",
@@ -89616,11 +90146,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2910,
-      3451,
-      0
-     ],
      "destination": {
       "name": "Taverley",
       "points": [
@@ -89635,7 +90160,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2894,
+      3465,
+      0
+     ]
     },
     {
      "id": "96260fc2b4",
@@ -90650,7 +91180,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "38ccf297c0",
@@ -90938,7 +91473,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "69879717aa",
@@ -90965,11 +91505,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3169,
-      3172,
-      0
-     ],
      "destination": {
       "name": "Lumbridge Swamp Dungeon",
       "points": [
@@ -90984,7 +91519,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Lumbridge Swamp Caves"
-     }
+     },
+     "arrivesAt": [
+      3169,
+      3172,
+      0
+     ]
     },
     {
      "id": "29e3cb6bf9",
@@ -91364,11 +91904,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3310,
-      2962,
-      0
-     ],
      "destination": {
       "name": "Smokey",
       "points": []
@@ -91667,7 +92202,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "1d48a09f1b",
@@ -91944,11 +92484,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2834,
-      3331,
-      1
-     ],
      "travel": {
       "place": "Entrana",
       "kind": "ships",
@@ -91983,7 +92518,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Entrana"
-     }
+     },
+     "arrivesAt": [
+      2834,
+      3331,
+      1
+     ]
     },
     {
      "id": "df40428d38",
@@ -92158,7 +92698,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Ardougne"
-     }
+     },
+     "arrivesAt": [
+      2570,
+      3300,
+      0
+     ]
     },
     {
      "id": "a562c495a4",
@@ -93218,7 +93763,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "771d1b504f",
@@ -93370,11 +93920,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2535,
-      3431,
-      0
-     ],
      "destination": {
       "name": "Rasolo",
       "points": []
@@ -93613,7 +94158,12 @@
      "spell": {
       "name": "TROLLHEIM_TELEPORT",
       "widget": 14286905
-     }
+     },
+     "arrivesAt": [
+      2891,
+      3678,
+      0
+     ]
     },
     {
      "id": "b85a6cc287",
@@ -94260,7 +94810,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "a32ad4015d",
@@ -94975,7 +95530,12 @@
      "spell": {
       "name": "LUMBRIDGE_TELEPORT",
       "widget": 14286877
-     }
+     },
+     "arrivesAt": [
+      3222,
+      3218,
+      0
+     ]
     },
     {
      "id": "992208797d",
@@ -95162,11 +95722,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      2593,
-      4320,
-      0
-     ],
      "destination": {
       "name": "Puro Puro",
       "points": [
@@ -95181,7 +95736,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Puro-Puro"
-     }
+     },
+     "arrivesAt": [
+      2593,
+      4320,
+      0
+     ]
     },
     {
      "id": "0242483bc8",
@@ -95928,7 +96488,12 @@
      "spell": {
       "name": "KOUREND_TELEPORT",
       "widget": 14286887
-     }
+     },
+     "arrivesAt": [
+      1628,
+      3673,
+      0
+     ]
     },
     {
      "id": "16ff1e0f71",
@@ -96168,7 +96733,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "98cfaf365b",
@@ -96865,7 +97435,12 @@
      "spell": {
       "name": "VARROCK_TELEPORT",
       "widget": 14286874
-     }
+     },
+     "arrivesAt": [
+      3213,
+      3424,
+      0
+     ]
     },
     {
      "id": "7508bab217",
@@ -96890,11 +97465,6 @@
       "confidence": "manual",
       "scattered": false
      },
-     "arrivesAt": [
-      1580,
-      3120,
-      0
-     ],
      "destination": {
       "name": "Varlamore",
       "points": [
@@ -96909,7 +97479,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Varlamore"
-     }
+     },
+     "arrivesAt": [
+      1580,
+      3120,
+      0
+     ]
     },
     {
      "id": "465f8f948c",
@@ -98435,7 +99010,12 @@
      "spell": {
       "name": "KOUREND_TELEPORT",
       "widget": 14286887
-     }
+     },
+     "arrivesAt": [
+      1628,
+      3673,
+      0
+     ]
     },
     {
      "id": "f0f7b076a7",
@@ -98657,7 +99237,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Prifddinas"
-     }
+     },
+     "arrivesAt": [
+      3263,
+      6083,
+      0
+     ]
     },
     {
      "id": "d6a3ac9f0c",
@@ -98831,11 +99416,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      1559,
-      3048,
-      0
-     ],
      "destination": {
       "name": "Hunter Guild",
       "points": [
@@ -98850,7 +99430,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Hunter Guild"
-     }
+     },
+     "arrivesAt": [
+      1559,
+      3048,
+      0
+     ]
     },
     {
      "id": "551e628138",
@@ -99243,11 +99828,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3724,
-      3807,
-      0
-     ],
      "travel": {
       "place": "Fossil Island",
       "kind": "ships",
@@ -99282,7 +99862,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Fossil Island"
-     }
+     },
+     "arrivesAt": [
+      3724,
+      3807,
+      0
+     ]
     },
     {
      "id": "00cf3c36c0",
@@ -99895,7 +100480,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2544,
+      3095,
+      0
+     ]
     },
     {
      "id": "efec5e14cb",
@@ -100017,7 +100607,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "b04d8a76bf",
@@ -100843,7 +101438,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3315,
+      3235,
+      0
+     ]
     },
     {
      "id": "e060b0ab50",
@@ -100870,11 +101470,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3304,
-      3123,
-      0
-     ],
      "destination": {
       "name": "Shantay Pass",
       "points": [
@@ -100889,7 +101484,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Shantay Pass"
-     }
+     },
+     "arrivesAt": [
+      3304,
+      3123,
+      0
+     ]
     },
     {
      "id": "a98380bc24",
@@ -101164,11 +101764,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      3427,
-      2911,
-      0
-     ],
      "destination": {
       "name": "Nardah",
       "points": [
@@ -101183,7 +101778,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      3425,
+      2928,
+      0
+     ]
     },
     {
      "id": "dac79f0931",
@@ -101817,7 +102417,12 @@
      "spell": {
       "name": "TELEPORT_HOME_STANDARD",
       "widget": 14286854
-     }
+     },
+     "arrivesAt": [
+      2117,
+      3903,
+      0
+     ]
     },
     {
      "id": "89a115e84c",
@@ -102390,7 +102995,12 @@
      "spell": {
       "name": "ARDOUGNE_TELEPORT",
       "widget": 14286892
-     }
+     },
+     "arrivesAt": [
+      2664,
+      3306,
+      0
+     ]
     },
     {
      "id": "6dfb57cf85",
@@ -102441,7 +103051,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2772,
+      3234,
+      0
+     ]
     },
     {
      "id": "82b03daebd",
@@ -103484,7 +104099,12 @@
      "spell": {
       "name": "FALADOR_TELEPORT",
       "widget": 14286880
-     }
+     },
+     "arrivesAt": [
+      2965,
+      3381,
+      0
+     ]
     },
     {
      "id": "cb72c6b4b9",
@@ -105266,7 +105886,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/TeleportLocationData"
-     }
+     },
+     "arrivesAt": [
+      2330,
+      3172,
+      0
+     ]
     },
     {
      "id": "8c20db3ae7",
@@ -105568,7 +106193,12 @@
       ],
       "ambiguous": false,
       "source": "runelite/DungeonLocation"
-     }
+     },
+     "arrivesAt": [
+      3226,
+      3108,
+      0
+     ]
     },
     {
      "id": "aa4389533a",
@@ -105894,7 +106524,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Kourend Woodland"
-     }
+     },
+     "arrivesAt": [
+      1540,
+      3464,
+      0
+     ]
     },
     {
      "id": "c50eb70a19",
@@ -106106,7 +106741,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Mount Quidamortem"
-     }
+     },
+     "arrivesAt": [
+      1255,
+      3548,
+      0
+     ]
     },
     {
      "id": "6dd2709dd6",
@@ -107074,11 +107714,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      1311,
-      3807,
-      0
-     ],
      "destination": {
       "name": "Mount Karuulm",
       "points": [
@@ -107093,7 +107728,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Mount Karuulm"
-     }
+     },
+     "arrivesAt": [
+      1311,
+      3807,
+      0
+     ]
     },
     {
      "id": "f269b4ecf0",
@@ -107565,7 +108205,12 @@
      "spell": {
       "name": "FORTIS_TELEPORT",
       "widget": 14286894
-     }
+     },
+     "arrivesAt": [
+      1681,
+      3133,
+      0
+     ]
     },
     {
      "id": "3e1c1acb73",
@@ -107893,7 +108538,12 @@
      "spell": {
       "name": "FORTIS_TELEPORT",
       "widget": 14286894
-     }
+     },
+     "arrivesAt": [
+      1681,
+      3133,
+      0
+     ]
     },
     {
      "id": "17907c93b6",
@@ -108025,11 +108675,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      1569,
-      3126,
-      0
-     ],
      "destination": {
       "name": "Ortus Farm",
       "points": [
@@ -108044,7 +108689,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Ortus Farm"
-     }
+     },
+     "arrivesAt": [
+      1569,
+      3126,
+      0
+     ]
     },
     {
      "id": "97fbd4c612",
@@ -108229,11 +108879,6 @@
       "pointSource": "wiki",
       "scattered": false
      },
-     "arrivesAt": [
-      1754,
-      3074,
-      0
-     ],
      "destination": {
       "name": "Emelio",
       "points": []
@@ -108396,7 +109041,12 @@
      "spell": {
       "name": "FORTIS_TELEPORT",
       "widget": 14286894
-     }
+     },
+     "arrivesAt": [
+      1681,
+      3133,
+      0
+     ]
     },
     {
      "id": "c2b8313d77",
@@ -108426,7 +109076,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Quetzacalli Gorge"
-     }
+     },
+     "arrivesAt": [
+      1505,
+      3232,
+      0
+     ]
     },
     {
      "id": "9bbfaee97e",
@@ -108525,7 +109180,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Quetzacalli Gorge"
-     }
+     },
+     "arrivesAt": [
+      1505,
+      3232,
+      0
+     ]
     },
     {
      "id": "3ae40eb2c5",
@@ -108726,7 +109386,12 @@
      "spell": {
       "name": "FORTIS_TELEPORT",
       "widget": 14286894
-     }
+     },
+     "arrivesAt": [
+      1681,
+      3133,
+      0
+     ]
     },
     {
      "id": "3d20324967",
@@ -108999,7 +109664,12 @@
      "spell": {
       "name": "FORTIS_TELEPORT",
       "widget": 14286894
-     }
+     },
+     "arrivesAt": [
+      1681,
+      3133,
+      0
+     ]
     },
     {
      "id": "8e2848df1c",
@@ -109029,7 +109699,12 @@
       ],
       "ambiguous": false,
       "source": "wiki/Tal Teklan"
-     }
+     },
+     "arrivesAt": [
+      1223,
+      3111,
+      0
+     ]
     },
     {
      "id": "0f6a22f27c",
@@ -650776,6 +651451,6 @@
   "ae34baad99": "8c44826480",
   "ba60f4f4fe": "c0297c1e56"
  },
- "contentHash": "2ee5bcd1a2945bc2",
- "generatedAt": "2026-09-14T15:44:18+00:00"
+ "contentHash": "6c4a8ba8a055d767",
+ "generatedAt": "2026-10-06T09:23:30+00:00"
 }

@@ -24,6 +24,7 @@
  */
 package com.b0atyguide.progress;
 
+import net.runelite.api.coords.WorldPoint;
 import com.b0atyguide.data.Completion;
 import com.b0atyguide.data.Guide;
 import com.b0atyguide.data.Section;
@@ -48,6 +49,19 @@ import java.util.function.ToIntFunction;
  */
 public final class AutoTick
 {
+	/** Arrival is data-driven; extra work can never be completed by proximity. */
+	public static boolean arrived(Step step, WorldPoint at, int radius)
+	{
+		if (step == null || at == null || step.isQuestStep() || step.isAdvice()
+			|| step.getCompletion() != null)
+		{
+			return false;
+		}
+		final WorldPoint where = step.getArrivesAt();
+		return where != null && at.getPlane() == where.getPlane()
+			&& at.distanceTo(where) <= radius;
+	}
+
 	private AutoTick()
 	{
 	}

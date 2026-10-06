@@ -24,6 +24,12 @@
  */
 package com.b0atyguide;
 
+import com.b0atyguide.path.ShortestPathBridge;
+
+import net.runelite.client.events.PluginMessage;
+
+import net.runelite.client.eventbus.EventBus;
+
 import com.b0atyguide.bank.GuideBankTags;
 import com.b0atyguide.bank.SetupReminder;
 import com.b0atyguide.bank.ShopOverlay;
@@ -191,6 +197,9 @@ public class B0atyGuidePlugin extends Plugin
 	private PathTracker pathTracker;
 
 	@Inject
+	private EventBus eventBus;
+
+	@Inject
 	private ApproachTracker approachTracker;
 
 	@Inject
@@ -305,6 +314,7 @@ public class B0atyGuidePlugin extends Plugin
 		loadProgress();
 
 		panel = injector.getInstance(GuidePanel.class);
+		panel.setShortestPathAction(this::routeWithShortestPath);
 		panel.init(guide, progress, this::onStepToggled, this::onStepSelected,
 			this::onSectionToggled, config::fontSize, config::collapseCompleted,
 			sectionImages, config::showSectionImages,
@@ -491,6 +501,31 @@ public class B0atyGuidePlugin extends Plugin
 	{
 		configManager.setConfiguration(
 			B0atyGuideConfig.GROUP, "showFeatures", Boolean.toString(show));
+	}
+
+	/** An explicit request only: never replace another plugin's route on every tick. */
+	private void routeWithShortestPath()
+	{
+		final Step requested = currentStep;
+		clientThread.invokeLater(() ->
+		{
+			if (!progressReady || requested == null || currentStep != requested
+				|| client.getGameState() != GameState.LOGGED_IN || panel == null)
+			{
+				return;
+			}
+			final PluginMessage message =
+				ShortestPathBridge.messageFor(requested, instructionFor(requested));
+			if (message != null)
+			{
+				eventBus.post(message);
+				panel.showRouteStatus("Destination sent. Enable the Shortest Path plugin to display its route.");
+			}
+			else
+			{
+				panel.showRouteStatus("This step has no single resolved destination.");
+			}
+		});
 	}
 
 	private void onStepSelected(Step step)
@@ -1022,6 +1057,8 @@ public class B0atyGuidePlugin extends Plugin
 		if (questCheckPending)
 		{
 			questCheckPending = false;
+			syncDiaryCompletion();
+			syncSkillCompletion();
 			syncQuestCompletion();
 		}
 	}
@@ -1078,7 +1115,8 @@ public class B0atyGuidePlugin extends Plugin
 	 */
 	private void syncArrived()
 	{
-		if (!config.autoTickArrival() || guide == null)
+		if (!progressReady || !config.autoTickArrival() || guide == null
+			|| client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
 		}
@@ -1091,7 +1129,7 @@ public class B0atyGuidePlugin extends Plugin
 			return;
 		}
 
-		if (at.getPlane() == where.getPlane() && at.distanceTo(where) <= ARRIVAL_TILES)
+		if (AutoTick.arrived(current, at, ARRIVAL_TILES))
 		{
 			progress.setComplete(current.getId(), true);
 			saveProgress();
@@ -1173,7 +1211,7 @@ public class B0atyGuidePlugin extends Plugin
 	@Subscribe
 	public void onStatChanged(StatChanged event)
 	{
-		syncSkillCompletion();
+		questCheckPending = true;
 	}
 
 	/**
@@ -1187,13 +1225,12 @@ public class B0atyGuidePlugin extends Plugin
 	@Subscribe
 	public void onVarbitChanged(VarbitChanged event)
 	{
-		syncDiaryCompletion();
-		syncSkillCompletion();
-		syncQuestProgress();
+		// Batch the guide-wide completion sweeps on GameTick. A burst of
+		// var updates otherwise scans every step repeatedly on the client thread.
 		// Most doors replace their scene object when opened, but an impostor can
 		// also change its actions in place when a varbit flips. The route's cached
-		// Open/Slash scan has to be rebuilt on the next tick in either case.
-		pathTracker.onSceneObjectChanged();
+		// Open/Slash scan is rebuilt only if a tracked definition actually changes.
+		pathTracker.onVariablesChanged();
 		questCheckPending = true;
 	}
 

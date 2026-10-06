@@ -42,6 +42,17 @@ A handful of steps tick themselves off from state the game actually sets,
 such as a finished quest, a diary task, or a skill reaching its target. You
 will need to check off the majority of steps manually.
 
+Pure travel steps can also tick when you reach their resolved destination,
+including plain teleports and home teleports. Toggle **Auto-tick when you
+arrive** in settings. Steps that include another task keep their own completion
+requirements.
+
+For routes beyond the loaded scene, enable the **Shortest Path** plugin and
+click **Route with Shortest Path** in the guide sidebar. It routes to the
+selected step when a single destination is known, using your Shortest Path
+settings. Click again after selecting a different step to request a new route.
+
+
 The panel shows the date of the wiki revision the guide was built from, so
 you can tell how current it is. Updates ship with a new plugin version.
 

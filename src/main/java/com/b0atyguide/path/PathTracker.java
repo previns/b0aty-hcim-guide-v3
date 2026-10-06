@@ -104,6 +104,7 @@ public class PathTracker
 	private int[][] cachedDoors;
 	private int[][] cachedWays;
 	private int[][] cachedVerifiedEntries;
+	private final TransformState transforms = new TransformState();
 
 	/**
 	 * The way into the enclosure the destination sits in, or null.
@@ -307,6 +308,7 @@ public class PathTracker
 	public void onSceneChanged()
 	{
 		entranceObject = null;
+		transforms.clear();
 		doorsFor = null;
 		cachedDoors = null;
 		cachedWays = null;
@@ -330,6 +332,12 @@ public class PathTracker
 		lastFrom = null;
 	}
 
+	/** Variables usually have nothing to do with doors; check only tracked transforms. */
+	public void onVariablesChanged()
+	{
+		transforms.invalidate();
+	}
+
 	/** Call from a game tick. */
 	public void update()
 	{
@@ -351,6 +359,16 @@ public class PathTracker
 		{
 			clear();
 			return;
+		}
+
+		if (transforms.changed(id ->
+		{
+			final ObjectComposition raw = client.getObjectDefinition(id);
+			final ObjectComposition resolved = raw == null ? null : raw.getImpostor();
+			return resolved == null ? id : resolved.getId();
+		}))
+		{
+			onSceneObjectChanged();
 		}
 
 		// Standing still is normally reason enough to keep the last answer. It
@@ -911,6 +929,10 @@ public class PathTracker
 		}
 		final ObjectComposition raw = client.getObjectDefinition(object.getId());
 		final ObjectComposition resolved = SceneObjects.definitionOf(client, object);
+		if (raw != null && raw.getImpostorIds() != null)
+		{
+			transforms.record(raw.getId(), resolved == null ? raw.getId() : resolved.getId());
+		}
 		return offersAnyAction(raw, verbs)
 			|| (resolved != raw && offersAnyAction(resolved, verbs));
 	}
