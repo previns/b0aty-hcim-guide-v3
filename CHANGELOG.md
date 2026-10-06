@@ -1,3 +1,9 @@
+# 1.3.2 - Restore bank-number search
+
+- Handle guide bank searches directly so they work without Bank Tags and are not overridden by an active tag tab.
+- Accept compact, spaced, and hash-prefixed bank numbers, regardless of letter case.
+- Preserve ordinary item searches, unrelated tags, and bank layout slots.
+
 # 1.3.1 ? Performance and travel completion
 
 - Batch variable-driven completion checks once per game tick and preserve the route cache when scenery transforms have not changed.

@@ -27,8 +27,8 @@ it, and markers on the minimap and world map.
 
 One feature worth knowing about: you can search your bank for the bank number
 you are on. Typing `bank150` or `bank 150` in the bank search shows all the
-items that bank needs, as if they had been tagged. This needs the Bank Tags
-plugin enabled.
+items that bank needs, as if they had been tagged. `bank #150` also works,
+and this search works with or without the Bank Tags plugin.
 
 ![Searching a bank number in game](docs/bank-search.png)
 
@@ -63,5 +63,4 @@ you can tell how current it is. Updates ship with a new plugin version.
 - The **[OSRS Wiki](https://oldschool.runescape.wiki)** for hosting the guide.
 - **[Quest Helper](https://github.com/Zoinkwiz/quest-helper)** by Zoinkwiz,
   whose work this plugin draws on.
-- RuneLite's **Bank Tags** plugin, which makes the in-game bank search
-  possible.
+- RuneLite's **Bank Tags** plugin, for virtual tag integration.

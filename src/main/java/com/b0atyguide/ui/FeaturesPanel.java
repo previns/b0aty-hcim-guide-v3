@@ -59,8 +59,8 @@ class FeaturesPanel extends JPanel
 	 */
 	private static final String[][] FEATURES = {
 		{"Search a bank in game",
-			"Type bank150 (or bank 150) in the bank search to see exactly what "
-				+ "that bank needs. Needs the Bank Tags plugin on."},
+			"Type bank150, bank 150, or bank #150 in the bank search to see what "
+				+ "that bank needs. Works with or without Bank Tags."},
 		{"See what you are missing",
 			"Items a bank asks for that you are not carrying are ringed in the "
 				+ "bank and inventory."},

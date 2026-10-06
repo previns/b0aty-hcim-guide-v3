@@ -53,8 +53,9 @@ import net.runelite.client.plugins.banktags.TagManager;
  * changes what a tag contains with no migration and no stale config. Writing
  * ~1,300 {@code item_<id>} keys into their profile would fail all three.
  *
- * <p>Degrades to nothing if the Bank Tags plugin is off: the tag is registered
- * and simply never consulted.
+ * <p>Virtual tags also work with Bank Tags. Plain bank-number queries have a
+ * native search callback, so they keep working when Bank Tags is disabled or
+ * an active tag tab would otherwise replace the typed query.
  */
 @Slf4j
 @Singleton
@@ -70,6 +71,13 @@ public class GuideBankTags
 	private TagManager tagManager;
 
 	private final List<String> registered = new ArrayList<>();
+	private volatile GuideBankSearch search = new GuideBankSearch(null);
+
+	/** Native bank-search callback; the published snapshot is safe across threads. */
+	public void filterSearch(int[] integers, int integerSize, Object[] objects, int objectSize)
+	{
+		search.filter(integers, integerSize, objects, objectSize);
+	}
 
 	public void register(Guide guide)
 	{
@@ -78,6 +86,8 @@ public class GuideBankTags
 		{
 			return;
 		}
+
+		search = new GuideBankSearch(guide);
 
 		// Six banks are split across two sections -- a continuation repeats the
 		// previous bank's number by design -- so the ids are gathered per tag
@@ -116,6 +126,7 @@ public class GuideBankTags
 			tagManager.unregisterTag(name);
 		}
 		registered.clear();
+		search = new GuideBankSearch(null);
 	}
 
 	public List<String> registeredTags()

@@ -1234,6 +1234,18 @@ public class B0atyGuidePlugin extends Plugin
 		questCheckPending = true;
 	}
 
+	/** Resolve explicit guide-bank searches after Bank Tags' default-priority filter. */
+	@Subscribe(priority = -1)
+	public void onScriptCallbackEvent(net.runelite.api.events.ScriptCallbackEvent event)
+	{
+		if (!"bankSearchFilter".equals(event.getEventName()) || !config.registerBankTags())
+		{
+			return;
+		}
+		bankTags.filterSearch(client.getIntStack(), client.getIntStackSize(),
+			client.getObjectStack(), client.getObjectStackSize());
+	}
+
 	@Subscribe
 	public void onNpcSpawned(NpcSpawned event)
 	{

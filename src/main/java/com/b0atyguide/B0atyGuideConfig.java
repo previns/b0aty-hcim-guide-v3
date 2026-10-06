@@ -320,11 +320,11 @@ public interface B0atyGuideConfig extends Config
 
 	@ConfigItem(
 		keyName = "registerBankTags",
-		name = "Bank tags for each bank",
+		name = "Bank-number search",
 		description =
-			"Type \"bank150\" in the bank search to see the items that bank needs. The tags are "
-				+ "computed from the guide, so your own bank tags are untouched and nothing is "
-				+ "left behind if you uninstall. Needs the Bank Tags plugin enabled.",
+			"Type \"bank150\", \"bank 150\", or \"bank #150\" in bank search to see the items that bank needs. "
+				+ "Results come from the guide, so your own bank tags are untouched and nothing is "
+				+ "left behind if you uninstall. Works with or without the Bank Tags plugin.",
 		section = bankSection,
 		position = 2
 	)
