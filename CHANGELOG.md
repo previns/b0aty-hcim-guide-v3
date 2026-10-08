@@ -1,3 +1,12 @@
+# 1.3.3 - Quest guidance and stutter fix
+
+- Fix the stutter when scenery loads, worst near the Wilderness Ditch, where an unreachable destination searched the whole scene about a hundred times a tick.
+- Follow Quest Helper through steps that depend on what you have already seen or said, which covers Murder Mystery's investigation.
+- Stop pinning "Complete <quest>" steps to an NPC or item that shares the quest's name, so Restless Ghost moves on from the ghost.
+- Highlight the inventory item a quest step uses, such as the skull for the coffin.
+- Highlight both ingredients of an inventory recipe like soft clay, and finish the step once they are combined.
+- Follow Elemental Workshop I, The Garden of Death, Alfred Grimhand's Barcrawl, The Path of Glouphrie and three Recipe for Disaster subquests.
+
 # 1.3.2 - Restore bank-number search
 
 - Handle guide bank searches directly so they work without Bank Tags and are not overridden by an active tag tab.

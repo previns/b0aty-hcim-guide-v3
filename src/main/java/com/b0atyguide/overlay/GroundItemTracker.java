@@ -27,6 +27,7 @@ package com.b0atyguide.overlay;
 import com.b0atyguide.data.ItemRef;
 import com.b0atyguide.data.QuestHelperSteps;
 import com.b0atyguide.data.Step;
+import com.b0atyguide.path.RealPoint;
 import com.b0atyguide.data.Target;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -106,7 +107,7 @@ public class GroundItemTracker
 		{
 			// A step told to acquire things wants its whole list watched --
 			// "Kill a Chicken. Take Everything" covers the bones and feather.
-			if (step.isAcquires())
+			if (step.isCollects() || (step.isAcquires() && !step.isWithdraw()))
 			{
 				for (ItemRef item : step.getItems())
 				{
@@ -138,38 +139,31 @@ public class GroundItemTracker
 	 */
 	public boolean anyOf(java.util.List<Integer> ids, java.util.List<java.util.List<Integer>> zone)
 	{
-		if (ids == null || ids.isEmpty() || client.getTopLevelWorldView() == null)
-		{
-			return false;
-		}
+		return ids != null && !ids.isEmpty() && conditionIndex().anyOf(ids, zone);
+	}
+
+	/** One lazy index per instruction evaluation, including the requested zone. */
+	SceneObjects.PresenceIndex conditionIndex()
+	{
+		final SceneObjects.PresenceIndex index = new SceneObjects.PresenceIndex();
+		if (client.getTopLevelWorldView() == null || client.getTopLevelWorldView().getScene() == null) { return index; }
 		final Tile[][][] scene = client.getTopLevelWorldView().getScene().getTiles();
 		final int plane = client.getTopLevelWorldView().getPlane();
-		if (scene == null || plane >= scene.length || scene[plane] == null)
-		{
-			return false;
-		}
+		if (scene == null || plane < 0 || plane >= scene.length || scene[plane] == null) { return index; }
 		for (Tile[] column : scene[plane])
 		{
-			if (column == null)
-			{
-				continue;
-			}
+			if (column == null) { continue; }
 			for (Tile tile : column)
 			{
-				if (tile == null || tile.getGroundItems() == null)
-				{
-					continue;
-				}
+				if (tile == null || tile.getGroundItems() == null) { continue; }
+				final WorldPoint at = RealPoint.of(client, tile.getWorldLocation());
 				for (TileItem item : tile.getGroundItems())
 				{
-					if (item != null && ids.contains(item.getId()))
-					{
-						return true;
-					}
+					if (item != null) { index.add(item.getId(), at); }
 				}
 			}
 		}
-		return false;
+		return index;
 	}
 
 	/** Tiles worth drawing, in world coordinates. */
@@ -248,14 +242,15 @@ public class GroundItemTracker
 	{
 		tiles.clear();
 		tileSnapshot = null;
-		if (wanted.isEmpty() || client.getTopLevelWorldView() == null)
+		if (wanted.isEmpty() || client.getTopLevelWorldView() == null
+			|| client.getTopLevelWorldView().getScene() == null)
 		{
 			return;
 		}
 
 		final Tile[][][] scene = client.getTopLevelWorldView().getScene().getTiles();
 		final int plane = client.getTopLevelWorldView().getPlane();
-		if (scene == null || plane >= scene.length || scene[plane] == null)
+		if (scene == null || plane < 0 || plane >= scene.length || scene[plane] == null)
 		{
 			return;
 		}

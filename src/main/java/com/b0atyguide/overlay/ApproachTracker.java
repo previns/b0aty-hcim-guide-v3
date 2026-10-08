@@ -157,6 +157,29 @@ public class ApproachTracker
 		lastInstruction = null;
 	}
 
+	/**
+	 * One object appeared or went away somewhere in the loaded scene.
+	 *
+	 * <p>Only a way up or down -- or the exact object a step's approach names --
+	 * can change the answer. Anything else used to send the next tick through
+	 * every object in the scene twice over, looking for stairs that were never
+	 * going to be there.
+	 */
+	public void onSceneObjectChanged(TileObject object)
+	{
+		if (object == null)
+		{
+			return;
+		}
+		final Step step = tracker.getStep();
+		final Approach known = step == null ? null : step.getApproach();
+		if ((known != null && known.getIds().contains(object.getId()))
+			|| climbs(object, "up") || climbs(object, "down"))
+		{
+			onSceneChanged();
+		}
+	}
+
 	private void rescan()
 	{
 		approach = null;

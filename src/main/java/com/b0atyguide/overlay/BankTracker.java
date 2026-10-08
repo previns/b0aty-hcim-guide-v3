@@ -104,6 +104,23 @@ public class BankTracker
 	}
 
 	/**
+	 * One object appeared or went away somewhere in the loaded scene.
+	 *
+	 * <p>Only a booth, chest or deposit box changes where the nearest bank is.
+	 * Every other object used to throw the answer away and walk the scene for
+	 * it again on the next tick.
+	 */
+	public void onSceneObjectChanged(TileObject object)
+	{
+		final ObjectComposition composition = object == null
+			? null : SceneObjects.definitionOf(client, object);
+		if (composition != null && banks(composition.getActions()))
+		{
+			onSceneChanged();
+		}
+	}
+
+	/**
 	 * Call from a game tick.
 	 *
 	 * <p>Scanning the scene means ~10,800 tiles and a composition lookup per

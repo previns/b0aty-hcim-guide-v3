@@ -28,10 +28,12 @@ import com.b0atyguide.data.QuestHelperSteps;
 import com.b0atyguide.data.Step;
 import com.b0atyguide.data.Target;
 import com.b0atyguide.path.RealPoint;
+import com.b0atyguide.path.TransformState;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Function;
 import java.util.Set;
 import javax.inject.Inject;
@@ -44,13 +46,9 @@ import net.runelite.api.NPCComposition;
 import net.runelite.api.ObjectComposition;
 import net.runelite.api.TileObject;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.events.GameObjectDespawned;
-import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GroundObjectSpawned;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
-import net.runelite.api.events.WallObjectSpawned;
 import net.runelite.client.callback.ClientThread;
 
 /**
@@ -106,6 +104,8 @@ public class SceneTracker
 
 	private final List<NPC> npcs = new ArrayList<>();
 	private final List<TileObject> objects = new ArrayList<>();
+	private final TransformState transforms = new TransformState();
+	private boolean objectsDirty;
 
 	private Step step;
 	private String sectionLabel;
@@ -412,6 +412,8 @@ public class SceneTracker
 	/** Forget what we were looking for, but not which step we are on. */
 	private void clearMatches()
 	{
+		transforms.clear();
+		objectsDirty = false;
 		wantedNames = Collections.emptyList();
 		wantedIds = Collections.emptySet();
 		wantedAt = Collections.emptyList();
@@ -543,7 +545,7 @@ public class SceneTracker
 
 	private static String normalise(String value)
 	{
-		return value.replace(' ', ' ').trim().toLowerCase();
+		return value.replace('\u00a0', ' ').trim().toLowerCase(Locale.ROOT);
 	}
 
 	private boolean npcMatches(NPC npc)
@@ -579,7 +581,7 @@ public class SceneTracker
 			|| (composition != null && nameMatches(composition.getName()));
 	}
 
-	private boolean objectMatches(TileObject object)
+	private boolean objectMatches(TileObject object, ObjectComposition composition)
 	{
 		if (!wantObject)
 		{
@@ -588,7 +590,6 @@ public class SceneTracker
 		if (activeTravel != null)
 		{
 			if (distance(realPointOf(object)) > 3) { return false; }
-			ObjectComposition composition = SceneObjects.definitionOf(client, object);
 			return activeTravel.matchesDeparture(object.getId(), realPointOf(object), 3)
 				|| (composition != null && activeTravel.matchesDeparture(composition.getId(), realPointOf(object), 3));
 		}
@@ -602,7 +603,6 @@ public class SceneTracker
 		}
 		// definitionOf resolves multi-state scenery through its impostor, and
 		// must run on the client thread -- which every caller here already does.
-		final ObjectComposition composition = SceneObjects.definitionOf(client, object);
 		return composition != null
 			&& (wantedIds.contains(composition.getId()) || nameMatches(composition.getName()));
 	}
@@ -636,10 +636,11 @@ public class SceneTracker
 	public final class PresenceCheck
 	{
 		private SceneObjects.PresenceIndex objectIndex;
+		private SceneObjects.PresenceIndex groundIndex;
 
 		public boolean isPresent(String kind, List<Integer> ids, List<List<Integer>> zone)
 		{
-			if (client == null || ids.isEmpty()
+			if (client == null || client.getTopLevelWorldView() == null || ids.isEmpty()
 				|| client.getGameState() != GameState.LOGGED_IN)
 			{
 				return false;
@@ -675,7 +676,9 @@ public class SceneTracker
 				return objectIndex.anyOf(ids, zone);
 			}
 			// A ground item. Asked of the tracker that already walks the tiles.
-			return groundItems != null && groundItems.anyOf(ids, zone);
+			if (!"groundItem".equals(kind) || groundItems == null) { return false; }
+			if (groundIndex == null) { groundIndex = groundItems.conditionIndex(); }
+			return groundIndex.anyOf(ids, zone);
 		}
 	}
 
@@ -711,10 +714,13 @@ public class SceneTracker
 
 	private void rescan()
 	{
+		objectsDirty = false;
+		transforms.clear();
 		npcs.clear();
 		objects.clear();
 
-		if (!isTracking() || client.getGameState() != GameState.LOGGED_IN)
+		if (!isTracking() || client.getTopLevelWorldView() == null
+			|| client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
 		}
@@ -735,7 +741,6 @@ public class SceneTracker
 			SceneObjects.forEach(client, this::consider);
 		}
 
-		final int before = npcs.size() + objects.size();
 		if (exactly)
 		{
 			// Quest Helper's coordinate, so Quest Helper's rules.
@@ -744,8 +749,8 @@ public class SceneTracker
 		}
 		else
 		{
-			keepNearest(npcs, NPC::getWorldLocation);
-			keepNearest(objects, TileObject::getWorldLocation);
+			keepNearest(npcs, this::realPointOf);
+			keepNearest(objects, this::realPointOf);
 		}
 
 	}
@@ -954,9 +959,56 @@ public class SceneTracker
 				return;
 			}
 		}
-		if (object != null && objects.size() < 64 && objectMatches(object))
+		if (object == null || !wantObject) { return; }
+		final ObjectComposition base = client.getObjectDefinition(object.getId());
+		final ObjectComposition composition = SceneObjects.definitionOf(client, object);
+		if (base != null && base.getImpostorIds() != null)
+		{
+			transforms.record(object.getId(), composition == null ? -1 : composition.getId());
+		}
+		// Reject off-target instances before applying the display cap. A scene
+		// full of identical objects must not crowd out the one on the exact tile.
+		if (exactly && !standsOn(object) && !(spread && distance(realPointOf(object)) < FAR)) { return; }
+		if (objects.size() < 64 && objectMatches(object, composition))
 		{
 			objects.add(object);
+		}
+	}
+
+	/** Coalesce scene events; a spawn must pass the same narrowing as a full scan. */
+	public void onSceneObjectChanged()
+	{
+		objectsDirty = true;
+	}
+
+	public void onVariablesChanged()
+	{
+		transforms.invalidate();
+	}
+
+	/** NPCs move/transform in place. Scenery is scanned only when invalidated. */
+	public void update()
+	{
+		if (client.getGameState() != GameState.LOGGED_IN || client.getTopLevelWorldView() == null) { return; }
+		if (objectsDirty || transforms.changed(id ->
+		{
+			ObjectComposition base = client.getObjectDefinition(id);
+			ObjectComposition active = base == null || base.getImpostorIds() == null ? base : base.getImpostor();
+			return active == null ? (base == null ? -1 : base.getId()) : active.getId();
+		}))
+		{
+			rescan();
+			return;
+		}
+		if (wantNpc)
+		{
+			npcs.clear();
+			for (NPC npc : client.getTopLevelWorldView().npcs())
+			{
+				if (npc != null && npcMatches(npc)) { npcs.add(npc); }
+			}
+			if (exactly) { keepWithinRoamRange(npcs); }
+			else { keepNearest(npcs, this::realPointOf); }
 		}
 	}
 
@@ -964,10 +1016,8 @@ public class SceneTracker
 
 	public void onNpcSpawned(NpcSpawned event)
 	{
-		if (wantNpc && npcMatches(event.getNpc()))
-		{
-			npcs.add(event.getNpc());
-		}
+		// The tick pass applies the same coordinate/range rules as initial load.
+
 	}
 
 	public void onNpcDespawned(NpcDespawned event)
@@ -975,24 +1025,45 @@ public class SceneTracker
 		npcs.remove(event.getNpc());
 	}
 
-	public void onGameObjectSpawned(GameObjectSpawned event)
+	/**
+	 * One object appeared or went away somewhere in the loaded scene.
+	 *
+	 * <p>Only the thing the step is looking for can change what is outlined: a
+	 * new one may be nearer, and one that went away has to be replaced. Any
+	 * other object used to send the whole scene back through the matcher on
+	 * the next tick, and in a busy area -- fires at the Grand Exchange, trees
+	 * cut down and growing back -- that was every tick.
+	 */
+	public void onSceneObjectChanged(TileObject object, boolean spawned)
 	{
-		consider(event.getGameObject());
-	}
-
-	public void onGameObjectDespawned(GameObjectDespawned event)
-	{
-		objects.remove(event.getGameObject());
-	}
-
-	public void onWallObjectSpawned(WallObjectSpawned event)
-	{
-		consider(event.getWallObject());
-	}
-
-	public void onGroundObjectSpawned(GroundObjectSpawned event)
-	{
-		consider(event.getGroundObject());
+		if (object == null)
+		{
+			return;
+		}
+		if (!spawned)
+		{
+			// Removed from the outline at once, then re-picked in case it was
+			// the nearest and the next one along had been dropped for it.
+			if (objects.remove(object))
+			{
+				objectsDirty = true;
+			}
+			return;
+		}
+		if (!wantObject) { return; }
+		final ObjectComposition base = client.getObjectDefinition(object.getId());
+		final ObjectComposition active = SceneObjects.definitionOf(client, object);
+		// A new object may transform into the target later without spawning
+		// again. Register its definition without scanning unrelated scenery.
+		if (base != null && base.getImpostorIds() != null)
+		{
+			transforms.record(object.getId(), active == null ? -1 : active.getId());
+		}
+		if (exactly && !standsOn(object) && !(spread && distance(realPointOf(object)) < FAR)) { return; }
+		if (objectMatches(object, active))
+		{
+			objectsDirty = true;
+		}
 	}
 
 	public void onGameStateChanged(GameStateChanged event)

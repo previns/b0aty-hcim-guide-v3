@@ -419,6 +419,19 @@ public interface B0atyGuideConfig extends Config
 		return true;
 	}
 
+
+	@ConfigItem(
+		keyName = "autoTickInventoryActions",
+		name = "Auto-tick verified inventory recipes",
+		description = "Complete a verified recipe only when its ingredients decrease and its product appears while this step is selected.",
+		section = panelSection,
+		position = 15
+	)
+	default boolean autoTickInventoryActions()
+	{
+		return true;
+	}
+
 	@ConfigItem(
 		keyName = "autoTickSkills",
 		name = "Auto-tick reached skill levels",

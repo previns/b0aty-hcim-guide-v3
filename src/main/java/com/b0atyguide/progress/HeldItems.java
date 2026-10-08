@@ -55,7 +55,8 @@ public final class HeldItems
 	 */
 	public static boolean satisfied(Step step, Map<Integer, Integer> held)
 	{
-		if (step == null || !step.isAcquires() || step.getItems().isEmpty())
+		if (step == null || !step.isAcquires() || step.isAdvice() || step.isQuestStep()
+			|| held == null || step.getItems().isEmpty())
 		{
 			return false;
 		}

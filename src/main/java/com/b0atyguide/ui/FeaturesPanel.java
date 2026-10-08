@@ -63,7 +63,7 @@ class FeaturesPanel extends JPanel
 				+ "that bank needs. Works with or without Bank Tags."},
 		{"See what you are missing",
 			"Items a bank asks for that you are not carrying are ringed in the "
-				+ "bank and inventory."},
+				+ "bank. Inventory rings show resolved items to interact with now."},
 		{"Right-click any step",
 			"Highlights it in the world without ticking it, so you can look "
 				+ "ahead. Left-click anywhere on a step to tick it."},
@@ -72,8 +72,8 @@ class FeaturesPanel extends JPanel
 				+ "by hand are remembered, so pressing it by accident costs "
 				+ "nothing."},
 		{"Some steps tick themselves",
-			"Quests, achievement diary tasks and skill levels complete on "
-				+ "their own. Everything else is yours to tick."},
+			"Supported quest, diary, skill, travel, acquisition and recipe steps "
+				+ "can complete automatically. Other steps are yours to tick."},
 		{"Watch the episode",
 			"The link under the search box opens the video for the bank you "
 				+ "are on."},

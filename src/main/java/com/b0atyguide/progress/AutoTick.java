@@ -109,7 +109,7 @@ public final class AutoTick
 					continue;
 				}
 				final Completion completion = step.getCompletion();
-				if (completion == null
+				if (completion == null || step.isAcquires() || step.isCompletionManual()
 					|| (onlyKind != null && !onlyKind.equals(completion.getKind())))
 				{
 					continue;

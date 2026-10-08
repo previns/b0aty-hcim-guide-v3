@@ -27,6 +27,7 @@ package com.b0atyguide.path;
 import java.awt.Point;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
@@ -653,6 +654,24 @@ public final class PathFinder
 			return null;
 		}
 
+		// One trial per run of touching door tiles, not one per tile. openingAt
+		// floods from the tile it is given across every door tile touching it,
+		// so every tile of a run opens the same run and gets the same answer.
+		// The Wilderness Ditch offers "Cross" on every tile of a line as wide as
+		// the scene: that was a hundred-odd identical searches of the whole
+		// scene, each with a fresh 104x104 grid, on every tick the player walked
+		// north of the Grand Exchange towards somewhere beyond it -- 35 ms and
+		// 22 MB of garbage per tick, measured, and the stutter in issue #1.
+		final int[] run = new int[SCENE * SCENE];
+		Arrays.fill(run, -1);
+		final List<Boolean> joins = new ArrayList<>();
+		// The region test below holds only for a player who starts outside the
+		// destination's region. Walls can be one-way, so from inside it a trial
+		// reaches the target through any door at all, and those doors are still
+		// offered; routeTo never gets here from inside, but this must not
+		// depend on its caller to give the same answer.
+		final boolean outsideGoal = fromGoal[index(startX, startY)] < 0;
+
 		Entry best = null;
 		int bestCost = Integer.MAX_VALUE;
 		for (int y = 0; y < SCENE; y++)
@@ -666,21 +685,27 @@ public final class PathFinder
 				{
 					continue;
 				}
-				// Do not pretend every closed entry is ground. Open only this
-				// actionable entry and its touching halves, then ask whether that
-				// real gate reaches the destination's region.
-				final int[][] openedHere = openingAt(doors, ways, x, y);
-				final List<Point> through = find(flags, openedHere,
-					startX, startY, target);
-				if (through.isEmpty())
+				final int here = index(x, y);
+				if (run[here] < 0)
 				{
-					continue;
+					final List<Integer> tiles = labelRun(doors, run, x, y, joins.size());
+					// A run nowhere near the destination's region cannot let the
+					// route into it. An opening only changes a step whose two
+					// tiles include one of its own -- passable() consults the mask
+					// on exactly those -- and a diagonal is four such steps, all
+					// beside the tile it lands on. The region is closed under
+					// ordinary steps except where a tile is solid: the flood never
+					// enters one, yet a step *out* of one is ordinary, since
+					// passable() reads only the tile being entered. An opening is
+					// the only way onto a solid tile, so at most one lies between
+					// the run and the region -- two tiles, not one. One was the
+					// first version of this, and it chose a different door.
+					// Asked of the region already flooded above: a door across
+					// town costs a few array reads, not a search of the scene.
+					joins.add((!outsideGoal || touches(fromGoal, tiles))
+						&& entersGoal(flags, doors, ways, x, y, startX, startY, target, fromGoal));
 				}
-				final Point reached = through.get(through.size() - 1);
-				// Adjacency is not enough: the tile nearest the target is often on
-				// the wrong side of the very wall we are trying to cross. The trial
-				// must genuinely enter the destination's collision-connected region.
-				if (fromGoal[index(reached.x, reached.y)] < 0)
+				if (!joins.get(run[here]))
 				{
 					continue;
 				}
@@ -702,6 +727,91 @@ public final class PathFinder
 			}
 		}
 		return best;
+	}
+
+	/**
+	 * Whether opening this run -- and nothing else -- lets the route into the
+	 * destination's region.
+	 *
+	 * <p>Do not pretend every closed entry is ground: open only this actionable
+	 * entry and its touching halves. Adjacency is not enough either, since the
+	 * tile nearest the target is often on the wrong side of the very wall being
+	 * crossed, so the trial has to genuinely enter the destination's
+	 * collision-connected region.
+	 */
+	private static boolean entersGoal(int[][] flags, int[][] doors, int[][] ways,
+		int x, int y, int startX, int startY, PathTarget target, int[] fromGoal)
+	{
+		final List<Point> through = find(flags, openingAt(doors, ways, x, y),
+			startX, startY, target);
+		if (through.isEmpty())
+		{
+			return false;
+		}
+		final Point reached = through.get(through.size() - 1);
+		return fromGoal[index(reached.x, reached.y)] >= 0;
+	}
+
+	/**
+	 * Mark every door tile touching this one with the same run number, and
+	 * return them. The same flood openingAt makes, so a run is exactly what
+	 * opening any one of its tiles would open.
+	 */
+	private static List<Integer> labelRun(int[][] doors, int[] run, int startX, int startY,
+		int label)
+	{
+		final List<Integer> tiles = new ArrayList<>();
+		final Deque<Integer> queue = new ArrayDeque<>();
+		final int start = index(startX, startY);
+		run[start] = label;
+		queue.add(start);
+		while (!queue.isEmpty())
+		{
+			final int at = queue.remove();
+			tiles.add(at);
+			final int x = at % SCENE;
+			final int y = at / SCENE;
+			for (int direction = 0; direction < 4; direction++)
+			{
+				final int nextX = x + DX[direction];
+				final int nextY = y + DY[direction];
+				if (outside(nextX, nextY))
+				{
+					continue;
+				}
+				final int next = index(nextX, nextY);
+				if (run[next] < 0 && doors[nextX][nextY] != 0)
+				{
+					run[next] = label;
+					queue.add(next);
+				}
+			}
+		}
+		return tiles;
+	}
+
+	/**
+	 * Whether the region comes within two tiles of any of these, diagonals
+	 * included. Why two is at the call site.
+	 */
+	private static boolean touches(int[] region, List<Integer> tiles)
+	{
+		for (int at : tiles)
+		{
+			final int x = at % SCENE;
+			final int y = at / SCENE;
+			for (int dx = -2; dx <= 2; dx++)
+			{
+				for (int dy = -2; dy <= 2; dy++)
+				{
+					if (reachable(region, x + dx, y + dy))
+					{
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 
 	/**

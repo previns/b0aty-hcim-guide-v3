@@ -332,6 +332,39 @@ public class PathTracker
 		lastFrom = null;
 	}
 
+	/**
+	 * One object appeared or went away somewhere in the loaded scene.
+	 *
+	 * <p>Only a door, a gate or some other way in changes what the door masks
+	 * record. Everything else -- a fire being lit, a tree going to a stump and
+	 * growing back -- does not, and treating every one of those as a scene
+	 * change rebuilt the masks from all 10,816 tiles on the game thread. Near
+	 * the Grand Exchange, Edgeville and the north of Varrock something is lit,
+	 * chopped or mined every tick, so it was every tick: the stutter players
+	 * reported, gone the moment the plugin was switched off.
+	 *
+	 * <p>Collision is not cached here. The route reads the live collision map
+	 * each time it is drawn, which is every tick the player moves.
+	 */
+	public void onSceneObjectChanged(TileObject object)
+	{
+		// Register new transformable scenery even when its current state is not
+		// an entry. A future var change can turn it into a door without a spawn.
+		if (object != null)
+		{
+			final ObjectComposition base = client.getObjectDefinition(object.getId());
+			if (base != null && base.getImpostorIds() != null)
+			{
+				final ObjectComposition active = base.getImpostor();
+				transforms.record(object.getId(), active == null ? base.getId() : active.getId());
+			}
+		}
+		if (object != null && (openable(object) || looksLikeAWayIn(object)))
+		{
+			onSceneObjectChanged();
+		}
+	}
+
 	/** Variables usually have nothing to do with doors; check only tracked transforms. */
 	public void onVariablesChanged()
 	{

@@ -29,22 +29,22 @@ import java.util.Map;
 import java.util.function.IntUnaryOperator;
 
 /** Scene-scoped object transforms. Variable bursts trigger one small check per tick. */
-final class TransformState
+public final class TransformState
 {
 	private final Map<Integer, Integer> definitions = new HashMap<>();
 	private boolean pending;
 
-	void record(int rawId, int resolvedId)
+	public void record(int rawId, int resolvedId)
 	{
 		definitions.put(rawId, resolvedId);
 	}
 
-	void invalidate()
+	public void invalidate()
 	{
 		pending = true;
 	}
 
-	boolean changed(IntUnaryOperator resolve)
+	public boolean changed(IntUnaryOperator resolve)
 	{
 		if (!pending)
 		{
@@ -61,7 +61,7 @@ final class TransformState
 		return false;
 	}
 
-	void clear()
+	public void clear()
 	{
 		definitions.clear();
 		pending = false;

@@ -32,6 +32,7 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Quest Helper's instructions for one quest, keyed by that quest's own progress
@@ -91,6 +92,7 @@ public class QuestHelperSteps
 		private int branches;
 		private List<Need> items;
 		private Integer icon;
+		private List<Integer> inventoryHighlightIds;
 		private boolean spread;
 		private List<String> dialogue;
 		private List<DialogueRule> dialogueRules;
@@ -177,6 +179,11 @@ public class QuestHelperSteps
 		 * goes on the npc and the item lights up in the inventory. It is the
 		 * clearest instruction the plugin gives, and it says it 918 times.
 		 */
+		public List<Integer> getInventoryHighlightIds()
+		{
+			return inventoryHighlightIds == null ? Collections.emptyList() : inventoryHighlightIds;
+		}
+
 		public int getIcon()
 		{
 			return icon == null ? 0 : icon;
@@ -197,6 +204,8 @@ public class QuestHelperSteps
 		 * that question can be answered here exactly, without any of the
 		 * condition engine this plugin does not reproduce.
 		 */
+		public Requirement getWhen() { return when; }
+
 		public List<Instruction> getWhenIn()
 		{
 			return whenIn == null ? Collections.emptyList() : whenIn;
@@ -511,6 +520,24 @@ public class QuestHelperSteps
 		private List<Requirement> all;
 		private List<Requirement> any;
 		private Requirement not;
+		private Memory memory;
+		private Memory once;
+		private Dialog dialog;
+
+		public Memory getMemory() { return memory; }
+		public Memory getOnce() { return once; }
+		public Dialog getDialog() { return dialog; }
+
+		/** Dependencies first, so observations are captured before branch selection. */
+		public void visit(Consumer<Requirement> visitor)
+		{
+			if (not != null) { not.visit(visitor); }
+			if (all != null) { for (Requirement part : all) { part.visit(visitor); } }
+			if (any != null) { for (Requirement part : any) { part.visit(visitor); } }
+			if (memory != null && memory.when != null) { memory.when.visit(visitor); }
+			if (once != null && once.when != null) { once.when.visit(visitor); }
+			visitor.accept(this);
+		}
 
 		/**
 		 * Completion accepts only explicit state predicates, not transient scene,
@@ -519,7 +546,8 @@ public class QuestHelperSteps
 		 */
 		public boolean isMilestoneCondition()
 		{
-			if (zone != null || item != null || here != null || open != null || widget != null
+			if (memory != null || once != null || dialog != null
+				|| zone != null || item != null || here != null || open != null || widget != null
 				|| not != null
 				|| (var != null ? 1 : 0) + (all != null ? 1 : 0) + (any != null ? 1 : 0) != 1)
 			{
@@ -538,8 +566,11 @@ public class QuestHelperSteps
 			return holds(null, Collections.emptyMap(), vars);
 		}
 
-		boolean holds(WorldPoint at, Map<Integer, Integer> held, Vars vars)
+		public boolean holds(WorldPoint at, Map<Integer, Integer> held, Vars vars)
 		{
+			if (memory != null) { return vars != null && vars.remembered(memory.key, memory.getValue(), true); }
+			if (once != null) { return vars != null && vars.remembered(once.key, "true", false); }
+			if (dialog != null) { return vars != null && vars.dialogSeen(dialog); }
 			// Quest Helper's LogicHelper: not(x) and nor(a, b) are its
 			// NOR, which is "none of these". Six hundred and ninety-four branch
 			// conditions are written with one of those helpers, and a branch
@@ -593,6 +624,7 @@ public class QuestHelperSteps
 				{
 					final Integer some = held == null ? null : held.get(id);
 					carried += some == null ? 0 : Math.max(0, some);
+					if (item.bank && vars != null) { carried += Math.max(0, vars.banked(id)); }
 				}
 				return carried >= item.getCount();
 			}
@@ -610,6 +642,31 @@ public class QuestHelperSteps
 				}
 			}
 			return false;
+		}
+	}
+
+	public static class Memory
+	{
+		private String key;
+		private String value;
+		private Requirement when;
+		public String getKey() { return key; }
+		public String getValue() { return value == null ? "true" : value; }
+		public Requirement getWhen() { return when; }
+	}
+
+	public static class Dialog
+	{
+		private String speaker;
+		private List<String> text;
+		private boolean active;
+		public boolean isActive() { return active; }
+		public String key() { return String.valueOf(speaker) + "|" + active + "|" + String.join("|", text); }
+		public boolean matches(String message, String playerName)
+		{
+			String talker = "@player".equals(speaker) ? playerName : speaker;
+			if (message == null || (speaker != null && (talker == null || !message.contains(talker + "|")))) { return false; }
+			return text != null && text.stream().anyMatch(message::contains);
 		}
 	}
 
@@ -858,6 +915,9 @@ public class QuestHelperSteps
 	 */
 	public interface Vars
 	{
+		default boolean remembered(String key, String value, boolean persistent) { return false; }
+		default boolean dialogSeen(Dialog dialog) { return false; }
+		default int banked(int itemId) { return 0; }
 		int varbit(int id);
 
 		int varplayer(int id);
@@ -1023,6 +1083,7 @@ public class QuestHelperSteps
 	 */
 	public static class Need
 	{
+		private boolean bank;
 		private String name;
 		private int count;
 		private List<Integer> ids;

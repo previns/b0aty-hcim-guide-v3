@@ -26,7 +26,7 @@ package com.b0atyguide.bank;
 
 import com.b0atyguide.data.QuestHelperSteps;
 import com.b0atyguide.data.Step;
-import com.b0atyguide.data.Target;
+import com.b0atyguide.data.InventoryAction;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -55,16 +55,13 @@ final class ItemHighlightTargets
 			questIds.clear();
 			if (selected != null)
 			{
-				for (QuestHelperSteps.Need need : selected.getItems())
-				{
-					questIds.addAll(need.getIds());
-				}
+				// Scenery icons can represent rewards. Only resolved interaction
+				// operands belong on inventory slots.
+				questIds.addAll(selected.getInventoryHighlightIds());
 			}
 		}
-		// Keep the icon check exactly as before, including item zero: it is
-		// a real item ID, not an empty inventory slot.
-		return selected != null
-			&& ((selected.hasIcon() && selected.getIcon() == itemId) || questIds.contains(itemId));
+		// Zero is a real item ID, not an empty inventory slot.
+		return questIds.contains(itemId);
 	}
 
 	boolean isStepItem(Step selected, int itemId)
@@ -73,11 +70,8 @@ final class ItemHighlightTargets
 		{
 			step = selected;
 			stepIds.clear();
-			final Target target = selected == null ? null : selected.getTarget();
-			if (target != null && Target.KIND_ITEM.equals(target.getKind()))
-			{
-				stepIds.addAll(target.getIds());
-			}
+			final InventoryAction action = selected == null ? null : selected.getInventoryAction();
+			if (action != null) { stepIds.addAll(action.getHighlightIds()); }
 		}
 		return stepIds.contains(itemId);
 	}

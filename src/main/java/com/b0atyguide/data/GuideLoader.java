@@ -155,6 +155,10 @@ public class GuideLoader
 					// two unrelated steps together.
 					throw new GuideLoadException("duplicate step id " + step.getId());
 				}
+				if (step.getInventoryAction() != null && !step.getInventoryAction().isValid())
+				{
+					throw new GuideLoadException("invalid inventory action on " + step.getId());
+				}
 				validateMilestone(guide, step);
 			}
 		}

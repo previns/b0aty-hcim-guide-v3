@@ -25,6 +25,7 @@
 package com.b0atyguide.bank;
 
 import com.b0atyguide.B0atyGuideConfig;
+import com.b0atyguide.progress.InventoryActionProgress;
 import com.b0atyguide.overlay.SceneTracker;
 import com.b0atyguide.overlay.Ring;
 import java.awt.Graphics2D;
@@ -58,6 +59,9 @@ public class WithdrawOverlay extends WidgetItemOverlay
 	@Inject
 	private B0atyGuideConfig config;
 
+	@Inject
+	private InventoryActionProgress actionProgress;
+
 
 	@Inject
 	WithdrawOverlay()
@@ -73,20 +77,21 @@ public class WithdrawOverlay extends WidgetItemOverlay
 		// withdraw, the item this step travels with, and what the quest is
 		// waiting on. Only the first is "missing" -- the player usually has the
 		// other two -- so they are separate questions.
-		final boolean travel = config.showTeleportItem() && tracker.isTeleport(itemId);
+		final boolean inBank = inTheBank(item);
+		final boolean travel = !inBank && config.showTeleportItem() && tracker.isTeleport(itemId);
 
 		// What Quest Helper would ring for the step the quest is on. In the
 		// inventory, where the player is about to click it, and only for the
 		// instruction in force -- the rest of the quest's shopping list is not
 		// what they need right now.
-		final boolean quest = config.showQuestSteps()
+		final boolean quest = !inBank && config.showQuestSteps()
+			&& (scene.getStep() == null || scene.getStep().getInventoryAction() == null)
 			&& targets.neededByQuest(scene.getInstruction(), itemId);
 
-		// And the item the step itself is about. "Read the Ardougne Teleport
-		// Scroll in your inventory" resolves to the scroll and nothing was
-		// marking it: an item target is not scenery, so the model outline had
-		// nothing to draw on and the bank ring only ever looked at the bank.
-		final boolean itself = config.highlightWithdrawItems()
+		// Explicit interaction operands only. Products and supplies do not tell
+		// the player to click an item; a completed recipe stops ringing inputs.
+		final boolean itself = !inBank && config.highlightWithdrawItems()
+			&& !actionProgress.finished(scene.getStep())
 			&& targets.isStepItem(scene.getStep(), itemId);
 
 		// Only in the bank. Ringing a withdraw item in the inventory too means
@@ -94,7 +99,7 @@ public class WithdrawOverlay extends WidgetItemOverlay
 		// the list, which reads as "still missing" when it is the opposite.
 		final boolean needed = config.highlightWithdrawItems()
 			&& tracker.isMissing(itemId)
-			&& inTheBank(item);
+			&& inBank;
 
 		if (!travel && !needed && !quest && !itself)
 		{

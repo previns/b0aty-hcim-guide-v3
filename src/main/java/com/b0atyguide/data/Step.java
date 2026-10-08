@@ -436,6 +436,9 @@ public class Step
 		return questCompletes;
 	}
 	private boolean acquires;
+	private boolean collects;
+	private boolean completionManual;
+	private InventoryAction inventoryAction;
 	private boolean withdraw;
 	private List<Integer> arrivesAt;
 	private boolean depositsAll;
@@ -563,6 +566,11 @@ public class Step
 	 * ("Withdraw:", "Buy", "Take") <em>and</em> every item resolved to ids, so
 	 * a partly-known list stays manual rather than ticking on half a match.
 	 */
+	public boolean isCompletionManual() { return completionManual; }
+
+	public InventoryAction getInventoryAction() { return inventoryAction; }
+	public boolean isCollects() { return collects; }
+
 	public boolean isAcquires()
 	{
 		return acquires;

@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
@@ -94,6 +95,7 @@ public class WithdrawTracker
 	private final List<String> questItems = new ArrayList<>();
 	private final Set<Integer> questIds = new LinkedHashSet<>();
 	private final SectionIndex sections = new SectionIndex();
+	private final AtomicLong generation = new AtomicLong();
 
 	/** Requirements from the current bank that are not carried. */
 	public List<ItemRef> getMissing()
@@ -132,9 +134,14 @@ public class WithdrawTracker
 
 	public void clear()
 	{
-		clearRequirements();
-		sections.clear();
+		final long expected = generation.incrementAndGet();
 		carried = Collections.emptyMap();
+		clientThread.invokeLater(() ->
+		{
+			if (expected != generation.get()) { return; }
+			clearRequirements();
+			sections.clear();
+		});
 	}
 
 	private void clearRequirements()
@@ -165,7 +172,11 @@ public class WithdrawTracker
 	 */
 	public void update(Guide guide, Step current)
 	{
-		clientThread.invokeLater(() -> recompute(guide, current));
+		final long expected = generation.incrementAndGet();
+		clientThread.invokeLater(() ->
+		{
+			if (expected == generation.get()) { recompute(guide, current); }
+		});
 	}
 
 	private void recompute(Guide guide, Step current)
@@ -342,7 +353,8 @@ public class WithdrawTracker
 				// exactly that item, so the guide kept saying "get the dwarf
 				// remains at the top of the tower" to a player carrying them.
 				// Worn equipment reports a quantity of zero, so it counts as one.
-				counts.merge(item.getId(), Math.max(1, item.getQuantity()), Integer::sum);
+				counts.merge(item.getId(), Math.max(1, item.getQuantity()),
+					(a, b) -> (int) Math.min(Integer.MAX_VALUE, (long) a + b));
 			}
 		}
 	}

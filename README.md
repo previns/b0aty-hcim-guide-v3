@@ -47,6 +47,9 @@ including plain teleports and home teleports. Toggle **Auto-tick when you
 arrive** in settings. Steps that include another task keep their own completion
 requirements.
 
+Inventory rings mark the items a step uses, not what it makes. Recipes like
+soft clay tick once the ingredients are combined.
+
 For routes beyond the loaded scene, enable the **Shortest Path** plugin and
 click **Route with Shortest Path** in the guide sidebar. It routes to the
 selected step when a single destination is known, using your Shortest Path
